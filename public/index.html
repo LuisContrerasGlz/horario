@@ -3,96 +3,211 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>sis_doc</title>
+    <meta name="theme-color" content="#183b3b" />
+    <title>sis_doc | Horarios docentes</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Sistema de documentos</p>
-        <h1>sis_doc</h1>
+    <header class="app-header">
+      <a class="brand" href="/" aria-label="sis_doc, inicio">
+        <span class="brand-mark" aria-hidden="true">SD</span>
+        <span class="brand-copy">
+          <span class="brand-name">sis_doc</span>
+          <span class="brand-caption">Control escolar · CETIS 155</span>
+        </span>
+      </a>
+      <div class="period-control">
+        <label for="semester-select">Periodo</label>
+        <select id="semester-select" aria-label="Periodo escolar"></select>
+        <span id="semester-state" class="status-pill" aria-live="polite">Cargando</span>
       </div>
-      <label class="semester-picker">
-        <span>Semestre activo</span>
-        <select id="semester-select"></select>
-      </label>
     </header>
 
-    <main class="dashboard">
-      <section class="card">
-        <h2>Carga docente</h2>
-        <form id="teacher-form" class="stack">
-          <label>
-            Profesor
-            <select id="teacher-select" required></select>
-          </label>
-          <label>
-            Materia
-            <select id="subject-select" required></select>
-          </label>
-          <label>
-            Grupo
-            <select id="group-select" required></select>
-          </label>
-          <button type="submit">Guardar carga</button>
-        </form>
-      </section>
+    <nav class="workspace-nav" aria-label="Módulos">
+      <button id="tab-load" class="workspace-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="view-load" data-view="load">Carga docente</button>
+      <button id="tab-schedule" class="workspace-tab" type="button" role="tab" aria-selected="false" aria-controls="view-schedule" data-view="schedule">Horarios</button>
+      <button id="tab-catalogs" class="workspace-tab" type="button" role="tab" aria-selected="false" aria-controls="view-catalogs" data-view="catalogs">Catálogos</button>
+      <span class="nav-spacer"></span>
+      <span id="workspace-cct" class="workspace-context"></span>
+    </nav>
 
-      <section class="card">
-        <h2>Asignación de horarios</h2>
-        <form id="schedule-form" class="stack">
-          <label>
-            Día
-            <select id="day-select" required>
-              <option value="Lunes">Lunes</option>
-              <option value="Martes">Martes</option>
-              <option value="Miércoles">Miércoles</option>
-              <option value="Jueves">Jueves</option>
-              <option value="Viernes">Viernes</option>
-            </select>
-          </label>
-          <label>
-            Bloque
-            <select id="block-select" required></select>
-          </label>
-          <label>
-            Docente
-            <select id="schedule-teacher-select" required></select>
-          </label>
-          <label>
-            Grupo
-            <select id="schedule-group-select" required></select>
-          </label>
-          <label>
-            Materia
-            <select id="schedule-subject-select" required></select>
-          </label>
-          <button type="submit">Guardar horario</button>
-        </form>
-      </section>
+    <main class="workspace">
+      <p id="app-message" class="app-message" role="status" aria-live="polite" hidden></p>
 
-      <section class="card wide-card">
-        <div class="section-heading">
-          <h2>Asignaciones actuales</h2>
-          <span id="summary-chip" class="chip">0 registros</span>
+      <section id="view-load" class="workspace-view is-active" role="tabpanel" aria-labelledby="tab-load">
+        <div class="view-heading">
+          <div>
+            <p class="eyebrow">Asignaciones del periodo</p>
+            <h1>Carga docente</h1>
+          </div>
+          <p class="view-count" id="load-record-count">0 asignaciones</p>
         </div>
-        <div class="table-wrap">
+
+        <div class="load-layout">
+          <section class="load-selection" aria-labelledby="load-selection-title">
+            <h2 id="load-selection-title">Docente seleccionado</h2>
+            <label for="teacher-select">Docente</label>
+            <select id="teacher-select" required></select>
+
+            <div class="teacher-summary" aria-live="polite">
+              <p id="teacher-summary-name" class="summary-name">Selecciona un docente</p>
+              <p id="teacher-summary-profile" class="summary-meta">Perfil no disponible</p>
+              <div class="hours-line">
+                <span>Disponibles</span>
+                <strong id="teacher-hours-remaining">--</strong>
+              </div>
+              <div class="hours-meter" aria-hidden="true"><span id="teacher-hours-meter"></span></div>
+              <p id="teacher-hours-detail" class="summary-meta">Nombramiento -- · Descarga -- · Asignadas --</p>
+            </div>
+
+            <form id="assignment-form" class="assignment-form">
+              <h2>Nueva asignación</h2>
+              <label for="subject-select">Materia</label>
+              <select id="subject-select" required></select>
+
+              <div class="field-pair">
+                <label for="group-select">Grupo</label>
+                <label for="specialty-filter">Especialidad</label>
+              </div>
+              <div class="field-pair field-pair-controls">
+                <select id="group-select" required></select>
+                <select id="specialty-filter" aria-label="Filtrar por especialidad"></select>
+              </div>
+
+              <label for="turn-filter">Turno</label>
+              <select id="turn-filter" aria-label="Filtrar grupos por turno"></select>
+
+              <div class="group-counts" aria-live="polite">
+                <span>Matutinos <strong id="morning-count">0</strong></span>
+                <span>Vespertinos <strong id="afternoon-count">0</strong></span>
+              </div>
+              <button id="add-assignment" class="button button-primary" type="submit">Agregar asignación</button>
+            </form>
+          </section>
+
+          <section class="assignment-list" aria-labelledby="assignment-list-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Semestre seleccionado</p>
+                <h2 id="assignment-list-title">Materias asignadas</h2>
+              </div>
+              <span id="assignment-total" class="total-hours">0 h</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Grupo</th><th>Materia</th><th>Horas</th></tr>
+                </thead>
+                <tbody id="assignment-table-body"></tbody>
+                <tfoot><tr><th colspan="2">Total asignado</th><td id="assignment-total-footer">0 h</td></tr></tfoot>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="view-schedule" class="workspace-view" role="tabpanel" aria-labelledby="tab-schedule" hidden>
+        <div class="view-heading">
+          <div>
+            <p class="eyebrow">Planeación semanal</p>
+            <h1>Horarios</h1>
+          </div>
+          <span id="schedule-edit-state" class="status-pill">Consulta</span>
+        </div>
+
+        <div class="schedule-modes" role="tablist" aria-label="Vista de horario">
+          <button class="mode-tab is-active" type="button" role="tab" aria-selected="true" data-schedule-mode="group">Horario de grupo</button>
+          <button class="mode-tab" type="button" role="tab" aria-selected="false" data-schedule-mode="teacher">Horario de docente</button>
+          <button class="mode-tab" type="button" role="tab" aria-selected="false" data-schedule-mode="subjects">Materias por semestre</button>
+        </div>
+
+        <div id="schedule-controls" class="schedule-controls">
+          <label id="schedule-group-field" for="schedule-group-select">Grupo
+            <select id="schedule-group-select"></select>
+          </label>
+          <label id="schedule-teacher-field" for="schedule-teacher-select" hidden>Docente
+            <select id="schedule-teacher-select"></select>
+          </label>
+          <label id="schedule-assignment-field" for="schedule-assignment-select">Asignación
+            <select id="schedule-assignment-select"></select>
+          </label>
+          <p id="schedule-context" class="schedule-context"></p>
+        </div>
+
+        <div id="schedule-grid-container" class="schedule-grid-container">
+          <div id="schedule-grid" class="table-wrap"></div>
+        </div>
+        <div id="subjects-by-semester" class="table-wrap" hidden>
           <table>
-            <thead>
-              <tr>
-                <th>Docente</th>
-                <th>Materia</th>
-                <th>Grupo</th>
-                <th>Día</th>
-                <th>Bloque</th>
-              </tr>
-            </thead>
-            <tbody id="schedule-table-body"></tbody>
+            <thead><tr><th>Semestre</th><th>Materia</th><th>Academia</th><th>Horas</th></tr></thead>
+            <tbody id="semester-subjects-body"></tbody>
           </table>
+        </div>
+      </section>
+
+      <section id="view-catalogs" class="workspace-view" role="tabpanel" aria-labelledby="tab-catalogs" hidden>
+        <div class="view-heading">
+          <div>
+            <p class="eyebrow">Consulta de información</p>
+            <h1>Catálogos</h1>
+          </div>
+          <div class="catalog-actions">
+            <button id="catalog-new" class="button button-primary" type="button" hidden>Nuevo</button>
+            <button id="catalog-edit" class="button button-secondary" type="button" hidden disabled>Editar</button>
+            <button id="catalog-delete" class="button button-danger" type="button" hidden disabled>Eliminar</button>
+            <button id="catalog-export" class="button button-secondary" type="button">Exportar CSV</button>
+            <button id="catalog-print" class="button button-secondary" type="button">Imprimir</button>
+          </div>
+        </div>
+
+        <div class="catalog-toolbar">
+          <label for="catalog-select">Catálogo
+            <select id="catalog-select"></select>
+          </label>
+          <label for="catalog-field">Buscar en
+            <select id="catalog-field"></select>
+          </label>
+          <label class="catalog-search" for="catalog-search">Coincidencia
+            <input id="catalog-search" type="search" placeholder="Escribe para filtrar" autocomplete="off" />
+          </label>
+          <button id="catalog-filter" class="button button-secondary" type="button">Filtrar</button>
+          <button id="catalog-clear" class="button button-quiet" type="button">Limpiar</button>
+        </div>
+
+        <div class="catalog-caption">
+          <p id="catalog-description"></p>
+          <p id="catalog-count" aria-live="polite">0 registros</p>
+        </div>
+        <div class="table-wrap catalog-table-wrap">
+          <table id="catalog-table">
+            <thead id="catalog-table-head"></thead>
+            <tbody id="catalog-table-body"></tbody>
+          </table>
+        </div>
+        <div class="catalog-pagination">
+          <span id="catalog-page-label">Página 1</span>
+          <div>
+            <button id="catalog-prev" class="button button-quiet" type="button" aria-label="Página anterior">Anterior</button>
+            <button id="catalog-next" class="button button-quiet" type="button" aria-label="Página siguiente">Siguiente</button>
+          </div>
         </div>
       </section>
     </main>
 
-    <script src="/app.js"></script>
+    <dialog id="catalog-dialog" class="catalog-dialog">
+      <form id="catalog-editor-form" method="dialog">
+        <div class="dialog-heading">
+          <h2 id="catalog-editor-title">Editar registro</h2>
+          <button id="catalog-editor-cancel" class="icon-button" type="button" aria-label="Cerrar">×</button>
+        </div>
+        <div id="catalog-editor-fields" class="dialog-fields"></div>
+        <div class="dialog-actions">
+          <button id="catalog-editor-dismiss" class="button button-quiet" type="button">Cancelar</button>
+          <button class="button button-primary" type="submit">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="/app.js" defer></script>
   </body>
 </html>
