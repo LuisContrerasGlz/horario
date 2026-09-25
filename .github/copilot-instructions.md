@@ -1,0 +1,2 @@
+Lee y respeta siempre las especificaciones contenidas en el archivo PLAN_DESARROLLO_COPILOT.md ubicado en la raíz del proyecto.
+Cualquier código de backend (TypeScript/Node.js/Express) o frontend (HTML/CSS/JS) debe alinearse con las reglas de negocio, tablas de MySQL y validaciones ahí descritas.

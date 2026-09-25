@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sis_doc</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Sistema de documentos</p>
+        <h1>sis_doc</h1>
+      </div>
+      <label class="semester-picker">
+        <span>Semestre activo</span>
+        <select id="semester-select"></select>
+      </label>
+    </header>
+
+    <main class="dashboard">
+      <section class="card">
+        <h2>Carga docente</h2>
+        <form id="teacher-form" class="stack">
+          <label>
+            Profesor
+            <select id="teacher-select" required></select>
+          </label>
+          <label>
+            Materia
+            <select id="subject-select" required></select>
+          </label>
+          <label>
+            Grupo
+            <select id="group-select" required></select>
+          </label>
+          <button type="submit">Guardar carga</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Asignación de horarios</h2>
+        <form id="schedule-form" class="stack">
+          <label>
+            Día
+            <select id="day-select" required>
+              <option value="Lunes">Lunes</option>
+              <option value="Martes">Martes</option>
+              <option value="Miércoles">Miércoles</option>
+              <option value="Jueves">Jueves</option>
+              <option value="Viernes">Viernes</option>
+            </select>
+          </label>
+          <label>
+            Bloque
+            <select id="block-select" required></select>
+          </label>
+          <label>
+            Docente
+            <select id="schedule-teacher-select" required></select>
+          </label>
+          <label>
+            Grupo
+            <select id="schedule-group-select" required></select>
+          </label>
+          <label>
+            Materia
+            <select id="schedule-subject-select" required></select>
+          </label>
+          <button type="submit">Guardar horario</button>
+        </form>
+      </section>
+
+      <section class="card wide-card">
+        <div class="section-heading">
+          <h2>Asignaciones actuales</h2>
+          <span id="summary-chip" class="chip">0 registros</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Docente</th>
+                <th>Materia</th>
+                <th>Grupo</th>
+                <th>Día</th>
+                <th>Bloque</th>
+              </tr>
+            </thead>
+            <tbody id="schedule-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
