@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 25-09-2026 a las 02:16:31
+-- Tiempo de generación: 28-09-2026 a las 22:55:42
 -- Versión del servidor: 10.4.28-MariaDB
 -- Versión de PHP: 8.1.17
 
@@ -104,21 +104,21 @@ CREATE TABLE `academia` (
 --
 
 INSERT INTO `academia` (`id_academia`, `nombre_academia`, `nombre_corto`, `id_especialidad`, `id_cct`, `id_status`) VALUES
-(1, 'MATEMATICAS', 'MAT', 1, 1, 1),
-(3, 'PROGRAMACION', 'PROG', 2, 1, 1),
-(4, 'MANTENIMIENTO AUTOMOTRIZ', 'MAN AUT', 2, 1, 1),
-(5, 'ADMINISTRACION DE RECURSOS HUMANOS', 'ADM REC HU', 2, 1, 1),
+(1, 'MATEMATICAS', 'MAT', 5, 1, 1),
+(3, 'PROGRAMACION', 'PROG', 1, 1, 1),
+(4, 'MANTENIMIENTO AUTOMOTRIZ', 'MAN AUT', 3, 1, 1),
+(5, 'ADMINISTRACION DE RECURSOS HUMANOS', 'ADM REC HU', 4, 1, 1),
 (6, 'SOPORTE Y MANTENIMIENTO DE EQUIPO DE COMPUTO', 'SOP EQ COM', 2, 1, 1),
-(7, 'PENSAMIENTO MATEMATICO', 'PEN MAT', 1, 1, 1),
-(8, 'LENGUA Y COMUNICACION', 'LEN COM', 1, 1, 1),
-(9, 'LENGUA EXTRANJERA', 'LEN EXT', 1, 1, 1),
-(10, 'CIENCIAS NATURALES EXPERIMENTALES Y TECNOLOGIA', 'CIEN NAT E', 1, 1, 1),
-(11, 'CULTURA DIGITAL', 'CUL DIG', 1, 1, 1),
-(12, 'HUMANIDADES', 'HUM', 1, 1, 1),
-(13, 'BIOLGIA', 'BIO', 1, 1, 1),
-(14, 'FISICA', 'FIS', 1, 1, 1),
-(15, 'CIENCIAS SOCIALES', 'CIENC SOC', 1, 1, 1),
-(17, 'SIN ACADEMIA', 'SIN ACAD', 3, 1, 1);
+(7, 'PENSAMIENTO MATEMATICO', 'PEN MAT', 5, 1, 1),
+(8, 'LENGUA Y COMUNICACION', 'LEN COM', 5, 1, 1),
+(9, 'LENGUA EXTRANJERA', 'LEN EXT', 5, 1, 1),
+(10, 'CIENCIAS NATURALES EXPERIMENTALES Y TECNOLOGIA', 'CIEN NAT E', 5, 1, 1),
+(11, 'CULTURA DIGITAL', 'CUL DIG', 5, 1, 1),
+(12, 'HUMANIDADES', 'HUM', 5, 1, 1),
+(13, 'BIOLGIA', 'BIO', 5, 1, 1),
+(14, 'FISICA', 'FIS', 5, 1, 1),
+(15, 'CIENCIAS SOCIALES', 'CIENC SOC', 5, 1, 1),
+(17, 'SIN ACADEMIA', 'SIN ACAD', 5, 1, 1);
 
 -- --------------------------------------------------------
 
@@ -231,7 +231,7 @@ INSERT INTO `docente` (`id_docente`, `RFC`, `Nombre`, `Apellido_pat`, `Apellido_
 (11, 'MEGG690303RM4', 'MA. GUADALUPE', 'MENDOZA', 'GONZALEZ', 'V', 'mendozgl@gmail.com', '', 0, 0, 2, 1, 1),
 (12, 'MOAL6303017G8', 'MA. LETICIA', 'MORALES', 'ACOSTA', 'I', 'mariel_shell@hotmail.com', '4491787136', 0, 0, 3, 1, 1),
 (13, 'MOEU640726VB1', 'URIEL', 'MORALES', 'ELIAS', 'M', 'urimoraeli@hotmail.com', '4491378997', 0, 0, 1, 1, 1),
-(15, 'JAPA8009252M9', 'AMIRA', 'JAUREGUI', 'PEREZ', 'DRA', 'eriosparra@yahoo.com', '449 999 9999', 0, 0, 2, 1, 1),
+(15, 'JAPA8009252M9', 'AMIRA', 'JAUREGUI', 'PEREZ', 'DRA', 'eriosparra@yahoo.com', '449 999 9999', 0, 0, 2, 1, 5),
 (16, 'ROSP820128EC7', 'PAMELA VIRIDIANA', 'ROBLEDO', 'SAMANO', 'M', 'pamikitty@hotmail.com', '', 0, 0, 1, 1, 1),
 (17, 'CAMJ840102S86', 'JANETTE DEL ROSARIO', 'CAMPOS', 'M RQUEZ', 'M', 'cecilia_1309@hotmail.com', '4492310718', 0, 0, 1, 1, 1),
 (18, 'TITA670625G21', 'ANABEL', 'TRINIDAD', 'TRINIDAD', 'M', 'aniytt@yahoo.com.mx', '4493000488', 0, 0, 1, 1, 1),
@@ -239,7 +239,7 @@ INSERT INTO `docente` (`id_docente`, `RFC`, `Nombre`, `Apellido_pat`, `Apellido_
 (20, 'LUGJ921118NZA', 'JUAN MANUEL', 'LUEVANO', 'GOMEZ', 'I', 'vhas58@hotmail.com', '', 0, 0, 3, 1, 1),
 (21, 'CACJ670802F64', 'J. ANGEL', 'CARRANZA', 'CARLIN', 'M', 'carranzacarlinl.angel@yahoo.com', '', 0, 0, 1, 1, 1),
 (23, 'COAJ810226E94', 'JOSEFINA', 'CONTRERAS', 'ARRIAGA', 'M', 'yulery@hotmail.com', '4491827174', 0, 0, 1, 1, 1),
-(24, 'CORM6410047G9', 'MARTIN', 'CONTRERAS', 'ROMO', 'V', 'conromo64@hotmail.com', '4491062147', 0, 0, 2, 1, 1),
+(24, 'CORM6410047G9', 'MARTIN', 'CONTRERAS', 'ROMO', 'V', 'conromo64@hotmail.com', '4491118793', 40, 10, 2, 1, 1),
 (25, 'TOSJ641125R23', 'JAIME', 'DE LA TORRE', 'SIFUENTES', 'I', 'jaimerutilio@msn.com', '4491981786', 0, 0, 3, 1, 1),
 (26, '', ' ALBERTO', 'QUEZADA', ' VAZQUEZ', 'I', 'maester56@hotmail.com', '4491027162', 0, 0, 3, 1, 1),
 (27, 'HEMA631216DV8', 'MARIA ALICIA', 'HERNANDEZ', 'MORAN', 'V', 'aliferic@yahoo.com.mx', '', 0, 0, 2, 1, 1),
@@ -296,9 +296,11 @@ CREATE TABLE `especialidad` (
 --
 
 INSERT INTO `especialidad` (`id_especialidad`, `nombre_especialidad`, `nombre_corto`, `id_cct`) VALUES
-(1, 'BASICAS', 'BAS', 1),
-(2, 'FORMACION PARA EL TRABAJO', 'FORM TRAB', 1),
-(3, 'OPTATIVA', 'OPTATIVA', 1);
+(1, 'PROGRAMACION', 'PROG', 1),
+(2, 'SOPORTE Y MTTO. EQ. COMP.', 'SOP.M.E.C', 1),
+(3, 'MANTENIMIENTO AUTOMOTRIZ', 'MTTO.AUT.', 1),
+(4, 'ADMINISTRACION DE RRHH', 'ARH', 1),
+(5, 'BASICAS', 'BAS', 1);
 
 -- --------------------------------------------------------
 
@@ -321,15 +323,55 @@ CREATE TABLE `grupo` (
 --
 
 INSERT INTO `grupo` (`id_grupo`, `semestre`, `grupo`, `id_especialidad`, `id_cct`, `id_turno`, `tipo_semestre`) VALUES
-(1, 1, 'A', 2, 1, 1, 'N'),
-(2, 1, 'G', 2, 1, 2, 'N'),
+(1, 1, 'A', 1, 1, 1, 'N'),
+(2, 1, 'G', 1, 1, 2, 'N'),
 (3, 1, 'B', 2, 1, 1, 'N'),
 (4, 1, 'H', 2, 1, 2, 'N'),
-(5, 2, 'A', 2, 1, 1, 'P'),
+(5, 2, 'A', 1, 1, 1, 'P'),
 (6, 2, 'B', 2, 1, 1, 'P'),
 (7, 1, 'C', 2, 1, 1, 'N'),
-(8, 3, 'A', 2, 1, 1, 'N'),
-(9, 5, 'A', 2, 1, 1, 'N');
+(8, 3, 'A', 1, 1, 1, 'N'),
+(9, 5, 'A', 1, 1, 1, 'N'),
+(10, 1, 'D', 4, 1, 1, 'N'),
+(11, 1, 'E', 4, 1, 1, 'N'),
+(12, 1, 'F', 3, 1, 1, 'N'),
+(13, 1, 'I', 3, 1, 2, 'N'),
+(14, 1, 'J', 3, 1, 2, 'N'),
+(15, 1, 'K', 4, 1, 2, 'N'),
+(16, 1, 'L', 4, 1, 2, 'N'),
+(17, 2, 'C', 2, 1, 1, 'P'),
+(18, 2, 'D', 4, 1, 1, 'P'),
+(19, 2, 'E', 4, 1, 1, 'P'),
+(20, 2, 'F', 3, 1, 1, 'P'),
+(21, 2, 'G', 1, 1, 2, 'P'),
+(22, 2, 'H', 2, 1, 2, 'P'),
+(23, 2, 'I', 3, 1, 2, 'P'),
+(24, 2, 'J', 3, 1, 2, 'P'),
+(25, 2, 'K', 4, 1, 2, 'P'),
+(26, 2, 'L', 4, 1, 2, 'P'),
+(27, 3, 'B', 2, 1, 1, 'N'),
+(28, 3, 'C', 2, 1, 1, 'N'),
+(29, 3, 'D', 4, 1, 1, 'N'),
+(30, 3, 'E', 4, 1, 1, 'N'),
+(31, 3, 'F', 3, 1, 1, 'N'),
+(32, 3, 'G', 1, 1, 2, 'N'),
+(33, 3, 'H', 2, 1, 2, 'N'),
+(34, 3, 'I', 3, 1, 2, 'N'),
+(35, 3, 'J', 3, 1, 2, 'N'),
+(36, 3, 'K', 4, 1, 2, 'N'),
+(37, 3, 'L', 4, 1, 2, 'N'),
+(38, 5, 'B', 2, 1, 1, 'N'),
+(39, 5, 'C', 2, 1, 1, 'N'),
+(40, 5, 'D', 4, 1, 1, 'N'),
+(41, 5, 'E', 4, 1, 1, 'N'),
+(42, 5, 'F', 3, 1, 1, 'N'),
+(43, 5, 'G', 1, 1, 2, 'N'),
+(44, 5, 'H', 2, 1, 2, 'N'),
+(45, 5, 'I', 3, 1, 2, 'N'),
+(46, 5, 'J', 3, 1, 2, 'N'),
+(47, 5, 'K', 4, 1, 2, 'N'),
+(48, 5, 'L', 3, 1, 2, 'N'),
+(49, 4, 'A', 1, 1, 1, 'P');
 
 -- --------------------------------------------------------
 
@@ -356,7 +398,7 @@ CREATE TABLE `materia` (
   `nombre_corto` varchar(20) NOT NULL,
   `semestre` int(11) NOT NULL,
   `horas` int(11) NOT NULL,
-  `tipo_semestre` varchar(1) DEFAULT NULL,
+  `tipo_semestre` enum('P','N') NOT NULL,
   `id_academia` int(11) DEFAULT NULL,
   `id_status` int(11) NOT NULL,
   `id_cct` int(11) DEFAULT NULL
@@ -610,11 +652,7 @@ CREATE TABLE `usuario` (
 INSERT INTO `usuario` (`id_usuario`, `nombre`, `correo_electronico`, `password`, `tipo_usuario`, `status`, `telefono`, `id_ct`) VALUES
 (1, 'Super Administrador', 'superAdm@gmail.com', '$2b$12$aXt.urKj5OgRLGnATTloj.siVIgmasf7uCVdWndWHyK/raktqif3a', 1, 1, '449 429 6282', 1),
 (2, 'Martin', 'martin@gmail.com', '$2b$12$1SGgp4REQ8oF178B55IgfeEzFvx4gD2L1wAH6lQTW5dANqBN8X8SK', 2, 1, '449 223 9955', 1),
-(3, 'Bernado', 'bernardo@gmail.com', '$2b$12$cZp3DQIUwFj8rKttO3lxC.CdFzpCvQeSE7TsMgup6iYb2osX/GMZ.', 2, 1, '449 107 7654', 2),
-(4, 'luis', 'luis@gmail.com', '$2b$12$x12.RpNjleTnslNzHs7S3eKPGbzjuVxnyj72rWrrXR12T5zTEzCIK', 4, 1, '449 568 6105', 1),
-(5, 'Regina', 'ReginaOdette@gmail.com', '$2b$12$AYcZPArJZHlyAXpvOltE8.0kdEEz4jZwYSK9d/us4EnWHDZWyxMtu', 4, 1, '351 304 6049', 1),
-(6, 'Mar', 'marlne@gmail.com', '$2b$12$7Fff2WKw7GEtESTEPVkvh.kmIgyCynpqYFoz7ciVWhhW0tUXuWcFC', 4, 1, '449 539 6287', 1),
-(7, 'Ian', 'ianYeshua@gmail.com', '$2b$12$mNtF3BfNJpMah78Dyw93i.CQYrF/tD6h7jscGgBuxtb/R4mImlqpy', 4, 1, '444 444 4444', 1);
+(3, 'Bernado', 'bernardo@gmail.com', '$2b$12$cZp3DQIUwFj8rKttO3lxC.CdFzpCvQeSE7TsMgup6iYb2osX/GMZ.', 2, 1, '449 107 7654', 2);
 
 -- --------------------------------------------------------
 
@@ -713,7 +751,7 @@ CREATE TABLE `vista_materias` (
 ,`nombre_corto` varchar(20)
 ,`semestre` int(11)
 ,`horas` int(11)
-,`tipo_semestre` varchar(1)
+,`tipo_semestre` enum('P','N')
 ,`id_academia` int(11)
 ,`nombre_academia` varchar(100)
 ,`academia_corto` varchar(10)
@@ -949,13 +987,13 @@ ALTER TABLE `docente`
 -- AUTO_INCREMENT de la tabla `especialidad`
 --
 ALTER TABLE `especialidad`
-  MODIFY `id_especialidad` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id_especialidad` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT de la tabla `grupo`
 --
 ALTER TABLE `grupo`
-  MODIFY `id_grupo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id_grupo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
 -- AUTO_INCREMENT de la tabla `horario_detalle`

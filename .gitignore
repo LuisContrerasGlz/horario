@@ -1,0 +1,39 @@
+# Depuración y logs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Entorno y variables secretas (¡Nunca subir contraseñas o datos de conexión!)
+.env
+.env.local
+.env.development
+.env.production
+
+# Archivos compilados (TypeScript a JavaScript)
+dist/
+build/
+*.tsbuildinfo
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Configuraciones locales de Editores e IDEs
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Archivos temporales e informes de pruebas
+coverage/
+.nyc_output/
+*.tgz
