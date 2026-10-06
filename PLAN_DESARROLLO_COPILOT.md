@@ -7,7 +7,7 @@
 >
 > Toma como referencia la estructura actual de la base de datos `sis_doc`.
 
----
+---   
 
 ## 1. RESUMEN Y ARQUITECTURA DEL PROYECTO
 
@@ -35,7 +35,49 @@ realizadas en el frontend.
 
 ---
 
-## 2. ESTÁNDAR HOMOGÉNEO DE CAPTURA PARA TODOS LOS CATÁLOGOS
+## 2. CONTROL DE ACCESO, AUTENTICACIÓN, ROLES Y RESTRICCIÓN POR CENTRO DE TRABAJO (CCT)
+
+El control de acceso al sistema se gestiona mediante autenticación por correo electrónico y contraseña registrados en la tabla `usuario` de la base de datos `sis_doc`.
+
+### 2.1 Gestión de Sesión e Inactividad
+* **Mecanismo:** Autenticación mediante `express-session` con almacenamiento seguro de estado en servidor.
+* **Caducidad por Inactividad:** La sesión expirará automáticamente tras **5 minutos de inactividad** (300,000 ms).
+* **Renovación:** Cualquier interacción HTTP / solicitud API restablecerá el contador del tiempo de inactividad.
+* **Cierre Forzado:** Al expirar el tiempo de inactividad o pulsar "Cerrar Sesión", la sesión se destruirá y redireccionará al usuario a la pantalla de Login con la notificación correspondiente.
+
+### 2.2 Restricción de Centro de Trabajo (CCT) por Usuario
+* **Superadministrador (`tipo_usuario = 1`):** Acceso multi-plantel total. Puede visualizar, seleccionar y cambiar libremente entre cualquier Centro de Trabajo (`id_cct`) registrado en la base de datos.
+* **Administrador (`tipo_usuario = 2`) y Revisor:** Acceso **estrictamente delimitado a su CCT de adscripción** (definido en `usuario.id_ct`).
+  * En la interfaz (Frontend), el desplegable de Centro de Trabajo aparecerá preseleccionado con su CCT y **deshabilitado (`disabled`)**, impidiendo seleccionar cualquier otro plantel.
+  * En el Backend, todas las consultas (`WHERE id_cct = ?`), filtrados de catálogos, carga docente y asignación de horarios se forzarán utilizando el `id_ct` almacenado en la sesión activa del usuario. Cualquier intento de enviar o manipular un `id_cct` distinto en la petición responderá con un error HTTP `403 Forbidden`.
+
+### 2.3 Matriz de Permisos por Rol (`tipo_usuario`)
+
+| Módulo / Catálogo | Superadministrador (`tipo_usuario = 1`) | Administrador (`tipo_usuario = 2`) | Revisor (Solo Lectura) | Captura / Docente (`tipo_usuario = 3 / 4`) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Inicio de Sesión / Login** | Acceso Completo | Acceso Completo | Acceso Completo | Acceso Completo |
+| **Selección de Centro de Trabajo (CCT)** | **Todos los CCT** (Libre Selección) | **Fijo a su CCT** (Sin Cambio) | **Fijo a su CCT** (Sin Cambio) | Fijo a su CCT |
+| **Carga Docente y Asignación de Horarios** | Acceso Completo (Lectura/Escritura) | Acceso Completo en su CCT | **Solo Consulta en su CCT** | Sin Acceso / Solo Consulta |
+| **Catálogos: Docentes, Materias, Grupos, Academias, Especialidades** | Acceso Completo | Acceso Completo en su CCT | **Solo Consulta en su CCT** | Sin Acceso |
+| **Catálogos: Semestres, Centros de Trabajo, Bloques Horarios, Turnos** | Acceso Completo | Solo Consulta (Lectura) | **Solo Consulta (Lectura)** | Sin Acceso |
+| **Catálogo: Estatus (`status`)** | Acceso Completo | **Sin Acceso** | **Sin Acceso** | Sin Acceso |
+| **Catálogo: Tipos de Usuario (`tipo_usuario`)** | Acceso Completo | **Sin Acceso** | **Sin Acceso** | Sin Acceso |
+| **Catálogo: Usuarios (`usuario`)** | Acceso Completo | **Sin Acceso** | **Sin Acceso** | Sin Acceso |
+
+### 2.4 Reglas Específicas por Rol
+1. **Superadministrador:** Control total sobre la visualización, creación, modificación y eliminación en todos los módulos, catálogos y centros de trabajo de la aplicación.
+2. **Administrador:** Puede consultar y modificar la Carga Docente, Horarios y catálogos académicos principales únicamente dentro de su CCT asignado. Tiene acceso de solo lectura a los catálogos globales (Semestres, CCT, Bloques, Turnos) y no tiene acceso a la administración de usuarios, tipos de usuario y estatus.
+3. **Revisor (Solo Lectura):** Puede consultar la Carga Docente, Horarios y catálogos académicos restringidos a su CCT asignado, pero con carácter **estrictamente de solo lectura**. No puede agregar, editar ni eliminar nada en el sistema.
+4. **Captura / Docente:** Sin acceso a la gestión de catálogos generales, limitado únicamente a consultar su propia información asignada en su CCT.
+
+### 2.5 Validaciones de Seguridad en Backend
+1. **Middleware de Autenticación (`authMiddleware`):** Protegerá todas las rutas API (`/api/*`). Si no existe una sesión válida o se excedieron los 5 minutos de inactividad, retornará HTTP `401 Unauthorized`.
+2. **Middleware de Autorización y CCT (`roleMiddleware`):** Validará en el backend que el usuario tenga permisos suficientes y que la operación corresponda estrictamente a su `id_ct` (salvo Superadministrador). Cualquier intento de modificación por un **Revisor** o acceso a datos de otro CCT por un **Administrador** será bloqueado inmediatamente con HTTP `403 Forbidden`.
+3. **Adaptación de Interfaz en Frontend:** Al iniciar sesión como **Revisor**, el frontend ocultará o deshabilitará todos los botones de acción ("Nuevo", "Editar", "Eliminar", "Guardar", "Agrega"). En **Administrador** y **Revisor**, los selectores de Centro de Trabajo quedarán bloqueados en su CCT asignado.
+
+---
+
+## 3. ESTÁNDAR HOMOGÉNEO DE CAPTURA PARA TODOS LOS CATÁLOGOS
 
 Todos los módulos de catálogos:
 
@@ -54,7 +96,7 @@ Todos los módulos de catálogos:
 deben compartir un patrón de interfaz de usuario y arquitectura CRUD
 estrictamente homogéneo.
 
-### 2.1 Estructura Visual Común de Catálogo
+### 3.1 Estructura Visual Común de Catálogo
 
 #### 1. Encabezado y Barra de Búsqueda
 
@@ -117,9 +159,9 @@ desde sus respectivos catálogos o vistas.
 
 ---
 
-## 3. ESPECIFICACIÓN DE CATÁLOGOS BASE
+## 4. ESPECIFICACIÓN DE CATÁLOGOS BASE
 
-### 3.1 Catálogo de Docentes
+### 4.1 Catálogo de Docentes
 
 Tabla:
 
@@ -164,7 +206,7 @@ Datos:
 * Horas de nombramiento
 * Horas de descarga
 * Turno
-* Centro de trabajo
+* Centro de trabajo (bloqueado al CCT del usuario para Administrador/Revisor)
 * Estatus
 
 #### Validaciones
@@ -175,7 +217,7 @@ Datos:
 
 ---
 
-### 3.2 Catálogo de Materias
+### 4.2 Catálogo de Materias
 
 Tabla:
 
@@ -224,7 +266,7 @@ deberán tener un `id_academia` válido o null.
 
 ---
 
-### 3.3 Catálogo de Grupos
+### 4.3 Catálogo de Grupos
 
 Tabla:
 
@@ -252,7 +294,7 @@ No utilizar `id_academia` como clasificación del grupo.
 
 ---
 
-### 3.4 Resto de Catálogos
+### 4.4 Resto de Catálogos
 
 #### centro_trabajo
 
@@ -317,9 +359,9 @@ Campos:
 
 ---
 
-# 4. REGLAS DE NEGOCIO Y FLUJO DE ASIGNACIÓN DE HORARIOS
+## 5. REGLAS DE NEGOCIO Y FLUJO DE ASIGNACIÓN DE HORARIOS
 
-## 4.1 Selección del Semestre Activo
+### 5.1 Selección del Semestre Activo
 
 El usuario seleccionará un periodo escolar de la tabla `semestre`.
 
@@ -341,7 +383,7 @@ Esta validación deberá realizarse obligatoriamente en el backend.
 
 ---
 
-## 4.2 Restricción Par / Impar
+### 5.2 Restricción Par / Impar
 
 El campo:
 
@@ -349,7 +391,7 @@ El campo:
 
 define el tipo de periodo activo.
 
-### Periodo Par
+#### Periodo Par
 
 Si:
 
@@ -365,7 +407,7 @@ correspondientes normalmente a:
 * 4°
 * 6°
 
-### Periodo Impar
+#### Periodo Impar
 
 Si:
 
@@ -388,7 +430,7 @@ El backend no debe confiar únicamente en los filtros del frontend.
 
 ---
 
-# 4.3 MÓDULO DE CARGA DOCENTE
+### 5.3 MÓDULO DE CARGA DOCENTE
 
 Tablas / vistas principales:
 
@@ -396,7 +438,7 @@ Tablas / vistas principales:
 * `vista_asignacion_docente`
 * `vista_docente`
 
-## 4.3.1 Tabla Superior de Docentes
+#### 5.3.1 Tabla Superior de Docentes
 
 Mostrar:
 
@@ -413,7 +455,7 @@ Las horas disponibles se calculan como:
 
 ---
 
-## 4.3.2 Panel de Selección
+#### 5.3.2 Panel de Selección
 
 Mostrar controles para seleccionar:
 
@@ -441,7 +483,7 @@ con:
 
 ---
 
-## 4.3.3 Vista de Asignaciones
+#### 5.3.3 Vista de Asignaciones
 
 Utilizar:
 
@@ -466,12 +508,12 @@ mostrar la suma de las horas asignadas durante el semestre seleccionado.
 
 ---
 
-# 4.4 VALIDACIONES AL CREAR UNA ASIGNACIÓN DOCENTE
+### 5.4 VALIDACIONES AL CREAR UNA ASIGNACIÓN DOCENTE
 
 Antes de insertar un registro en `asignacion_docente`, el backend debe
 realizar las siguientes validaciones.
 
-## 4.4.1 Semestre Activo
+#### 5.4.1 Semestre Activo
 
 El `id_semestre` seleccionado debe existir y tener:
 
@@ -481,7 +523,7 @@ Si no está activo, cancelar la operación.
 
 ---
 
-## 4.4.2 Correspondencia Par / Impar
+#### 5.4.2 Correspondencia Par / Impar
 
 Debe cumplirse:
 
@@ -495,7 +537,7 @@ No permitir asignaciones que violen esta regla.
 
 ---
 
-## 4.4.3 Correspondencia del Número de Semestre
+#### 5.4.3 Correspondencia del Número de Semestre
 
 Además de ser ambos pares o impares, deberá cumplirse:
 
@@ -510,7 +552,7 @@ Aunque ambos sean tipo `N`, la asignación no debe permitirse.
 
 ---
 
-## 4.4.4 Compatibilidad de Centro de Trabajo
+#### 5.4.4 Compatibilidad de Centro de Trabajo
 
 Los siguientes registros deberán pertenecer al mismo centro de trabajo:
 
@@ -527,11 +569,11 @@ Debe cumplirse:
 
 `docente.id_cct = semestre.id_cct`
 
-No permitir asignaciones entre registros pertenecientes a CCT diferentes.
+Para Administrador y Revisor, este CCT debe coincidir estrictamente con su `usuario.id_ct`. No permitir cruces con CCT distintos.
 
 ---
 
-## 4.4.5 Evitar Asignaciones Duplicadas
+#### 5.4.5 Evitar Asignaciones Duplicadas
 
 No debe existir otra asignación con la misma combinación:
 
@@ -545,7 +587,7 @@ combinación.
 
 ---
 
-## 4.4.6 Límite de Carga Docente
+#### 5.4.6 Límite de Carga Docente
 
 La suma de las horas de las materias asignadas al docente durante
 el semestre seleccionado no deberá superar:
@@ -568,7 +610,7 @@ Máximo asignable:
 
 ---
 
-## 4.4.7 Grupo Obligatorio
+#### 5.4.7 Grupo Obligatorio
 
 El flujo normal de asignación se define como:
 
@@ -584,7 +626,7 @@ No crear asignaciones sin grupo.
 
 ---
 
-# 4.5 MÓDULO DE HORARIOS
+### 5.5 MÓDULO DE HORARIOS
 
 Tablas principales:
 
@@ -592,7 +634,7 @@ Tablas principales:
 * `bloque_horario`
 * `asignacion_docente`
 
-## 4.5.1 Pestañas
+#### 5.5.1 Pestañas
 
 Mostrar:
 
@@ -602,7 +644,7 @@ Mostrar:
 
 ---
 
-## 4.5.2 Selección del Grupo
+#### 5.5.2 Selección del Grupo
 
 Mostrar un combo para seleccionar el grupo.
 
@@ -610,7 +652,7 @@ Los grupos deberán filtrarse por:
 
 * `id_semestre` seleccionado;
 * `tipo_semestre`;
-* `id_cct`.
+* `id_cct` (restringido al CCT del usuario para Administrador/Revisor).
 
 Una vez seleccionado un grupo, obtener:
 
@@ -620,7 +662,7 @@ para determinar los bloques horarios disponibles.
 
 ---
 
-## 4.5.3 Selección de Docente / Materia
+#### 5.5.3 Selección de Docente / Materia
 
 Mostrar únicamente asignaciones existentes en:
 
@@ -638,7 +680,7 @@ La información visible deberá incluir:
 
 ---
 
-## 4.5.4 Retícula Semanal
+#### 5.5.4 Retícula Semanal
 
 Columnas:
 
@@ -655,7 +697,7 @@ Las filas se cargarán desde:
 
 ---
 
-## 4.5.5 Bloques Matutinos
+#### 5.5.5 Bloques Matutinos
 
 Para:
 
@@ -681,7 +723,7 @@ Continuar con:
 
 ---
 
-## 4.5.6 Bloques Vespertinos
+#### 5.5.6 Bloques Vespertinos
 
 Para:
 
@@ -707,7 +749,7 @@ Continuar con:
 
 ---
 
-# 4.6 OPERACIÓN DE LA MALLA DE HORARIOS
+### 5.6 OPERACIÓN DE LA MALLA DE HORARIOS
 
 Al hacer clic en una celda disponible:
 
@@ -730,7 +772,7 @@ La información mostrada visualmente en la celda deberá incluir al menos:
 
 ---
 
-## 4.6.1 Eliminación desde una Celda
+#### 5.6.1 Eliminación desde una Celda
 
 Si la celda ya contiene exactamente la misma:
 
@@ -751,14 +793,14 @@ la eliminación, ya que un mismo docente puede impartir diferentes materias.
 
 ---
 
-# 4.7 VALIDACIONES BACKEND AL GUARDAR HORARIO
+### 5.7 VALIDACIONES BACKEND AL GUARDAR HORARIO
 
 Todas estas validaciones deberán ejecutarse antes de insertar
 `horario_detalle`.
 
 ---
 
-## 4.7.1 Semestre Activo
+#### 5.7.1 Semestre Activo
 
 La asignación deberá pertenecer al semestre seleccionado.
 
@@ -774,7 +816,7 @@ Si el semestre está inactivo, no permitir:
 
 ---
 
-## 4.7.2 Sin Empalme de Docente
+#### 5.7.2 Sin Empalme de Docente
 
 Un docente no puede tener más de una clase en:
 
@@ -792,7 +834,7 @@ Si ya existe otra asignación, mostrar:
 
 ---
 
-## 4.7.3 Sin Empalme de Grupo
+#### 5.7.3 Sin Empalme de Grupo
 
 Un grupo no puede tener más de una clase en:
 
@@ -810,7 +852,7 @@ Si ya existe otra asignación, mostrar:
 
 ---
 
-## 4.7.4 Compatibilidad del Turno
+#### 5.7.4 Compatibilidad del Turno
 
 El bloque horario deberá corresponder al turno del grupo.
 
@@ -826,7 +868,7 @@ Un grupo Vespertino no podrá utilizar bloques M1-M8.
 
 ---
 
-## 4.7.5 Coherencia del Semestre
+#### 5.7.5 Coherencia del Semestre
 
 La asignación, materia y grupo deberán respetar el semestre activo.
 
@@ -842,7 +884,7 @@ y además:
 
 ---
 
-## 4.7.6 Número de Semestre
+#### 5.7.6 Número de Semestre
 
 Validar:
 
@@ -852,16 +894,14 @@ No será suficiente que ambos pertenezcan al mismo tipo P/N.
 
 ---
 
-## 4.7.7 Centro de Trabajo
+#### 5.7.7 Centro de Trabajo
 
 La asignación utilizada deberá pertenecer al mismo CCT del semestre
-y del grupo que se está programando.
-
-No permitir cruces entre centros de trabajo diferentes.
+y del grupo que se está programando. Para Administrador y Revisor, deberá coincidir estrictamente con su `usuario.id_ct`.
 
 ---
 
-# 4.8 TRANSACCIONES Y CONCURRENCIA
+### 5.8 TRANSACCIONES Y CONCURRENCIA
 
 Las operaciones críticas de horarios deberán realizarse utilizando
 transacciones SQL.
@@ -891,9 +931,9 @@ el horario simultáneamente.
 
 ---
 
-# 4.9 RESPONSABILIDAD DE LAS CAPAS
+### 5.9 RESPONSABILIDAD DE LAS CAPAS
 
-## Base de Datos
+#### Base de Datos
 
 Responsable de:
 
@@ -902,12 +942,15 @@ Responsable de:
 * restricciones UNIQUE;
 * integridad referencial;
 * almacenamiento persistente;
-* vistas SQL.
+* vistas SQL;
+* usuarios y contraseñas.
 
-## Backend
+#### Backend
 
 Responsable de:
 
+* autenticación de usuarios y caducidad de sesión (5 min de inactividad);
+* middleware de control de acceso, matriz de permisos por rol y **restricción estricta por `id_ct`** (salvo Superadministrador);
 * semestre activo;
 * permisos de modificación;
 * par / impar;
@@ -919,11 +962,14 @@ Responsable de:
 * compatibilidad de turno;
 * transacciones.
 
-## Frontend
+#### Frontend
 
 Responsable de:
 
-* presentación;
+* formulario de inicio de sesión (Login);
+* presentación según rol del usuario logueado;
+* fijar y deshabilitar la selección de Centro de Trabajo (CCT) para Administrador y Revisor;
+* ocultar / deshabilitar botones de edición para perfiles restringidos o rol Revisor (solo lectura);
 * selects dependientes;
 * filtros;
 * búsqueda;
@@ -931,15 +977,15 @@ Responsable de:
 * contadores;
 * mensajes al usuario;
 * representación de la malla;
-* bloqueo visual de acciones cuando el semestre no sea editable.
+* bloqueo visual de acciones cuando el semestre no sea editable o el rol no tenga permisos de escritura.
 
 Las restricciones críticas siempre deben volver a validarse en backend.
 
 ---
 
-# 5. CATÁLOGO DE BLOQUES DE HORARIO
+## 6. CATÁLOGO DE BLOQUES DE HORARIO
 
-## Turno Matutino — id_turno = 1
+### Turno Matutino — id_turno = 1
 
 * M1 — 07:00-07:50
 * M2 — 07:50-08:40
@@ -951,7 +997,7 @@ Las restricciones críticas siempre deben volver a validarse en backend.
 * M7 — 12:20-13:10
 * M8 — 13:10-14:00
 
-## Turno Vespertino — id_turno = 2
+### Turno Vespertino — id_turno = 2
 
 * V1 — 14:00-14:50
 * V2 — 14:50-15:40
@@ -965,7 +1011,7 @@ Las restricciones críticas siempre deben volver a validarse en backend.
 
 ---
 
-# 6. CRITERIOS GENERALES DE IMPLEMENTACIÓN
+## 7. CRITERIOS GENERALES DE IMPLEMENTACIÓN
 
 1. No duplicar datos que puedan obtenerse mediante relaciones existentes.
 2. `horario_detalle` continuará almacenando únicamente:
@@ -990,19 +1036,14 @@ Las restricciones críticas siempre deben volver a validarse en backend.
 
 ---
 
-# 7. CRITERIO DE ÉXITO DEL MÓDULO DE CARGA Y HORARIOS
+## 8. CRITERIO DE ÉXITO DEL MÓDULO DE AUTENTICACIÓN Y CONTROL DE ACCESO
 
 El módulo se considerará funcionalmente correcto cuando:
 
-1. Un docente pueda recibir materias únicamente dentro de un semestre activo.
-2. Materia y grupo correspondan al mismo número de semestre.
-3. Materia y grupo sean compatibles en P/N.
-4. Los registros pertenezcan al mismo CCT.
-5. La carga total del docente no exceda su disponibilidad.
-6. No puedan existir asignaciones exactamente duplicadas.
-7. No pueda existir empalme de docente dentro del mismo semestre.
-8. No pueda existir empalme de grupo dentro del mismo semestre.
-9. Los bloques correspondan al turno del grupo.
-10. Los semestres inactivos sean únicamente de consulta.
-11. La malla refleje inmediatamente los cambios realizados en
-    `horario_detalle`.
+1. El inicio de sesión valide credenciales directamente contra la tabla `usuario` en MySQL.
+2. La sesión expire automáticamente tras **5 minutos de inactividad**.
+3. El Superadministrador tenga acceso total a la consulta, edición, creación y libre selección entre cualquier Centro de Trabajo (CCT) registrado.
+4. El Administrador y el Revisor queden estrictamente limitados al Centro de Trabajo registrado en su cuenta (`usuario.id_ct`), sin poder seleccionar o modificar datos de ningún otro CCT.
+5. El Administrador pueda editar/agregar en la Carga Docente, Horarios y catálogos de docente, materia, grupo, academia y especialidad de su CCT, con acceso de solo lectura a los catálogos globales (semestre, CCT, bloques, turno) y bloqueo total a usuarios, tipos de usuario y estatus.
+6. El **Revisor** pueda consultar la Carga Docente, Horarios y catálogos permitidos únicamente de su CCT, pero con un bloqueo **estricto a nivel de backend y frontend de cualquier acción de creación, edición o eliminación (modo 100% solo lectura)**.
+7. El backend rechace con HTTP 401 o 403 cualquier petición `POST`, `PUT` o `DELETE` realizada por usuarios no autenticados, con rol **Revisor**, o que intente acceder/modificar registros pertenecientes a un CCT distinto al asignado en la sesión del usuario.

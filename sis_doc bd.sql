@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 28-09-2026 a las 22:55:42
+-- Tiempo de generación: 01-10-2026 a las 22:28:41
 -- Versión del servidor: 10.4.28-MariaDB
 -- Versión de PHP: 8.1.17
 
@@ -605,7 +605,7 @@ CREATE TABLE `tipo_usuario` (
 INSERT INTO `tipo_usuario` (`id_tipo_usuario`, `descripcion`) VALUES
 (1, 'Super Administrador'),
 (2, 'Administrador'),
-(3, 'Captura'),
+(3, 'Revisor'),
 (4, 'Docente');
 
 -- --------------------------------------------------------

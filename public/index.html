@@ -13,13 +13,20 @@
         <span class="brand-mark" aria-hidden="true">SD</span>
         <span class="brand-copy">
           <span class="brand-name">sis_doc</span>
-          <span class="brand-caption">Control escolar · CETIS 155</span>
+          <span class="brand-caption">Servicios Docentes - CORM</span>
         </span>
       </a>
       <div class="period-control">
         <label for="semester-select">Periodo</label>
         <select id="semester-select" aria-label="Periodo escolar"></select>
         <span id="semester-state" class="status-pill" aria-live="polite">Cargando</span>
+      </div>
+      <div class="topbar-user">
+        <span class="topbar-user-info">
+          <span id="current-user-name" class="topbar-user-name"></span>
+          <span id="current-user-role" class="topbar-user-role"></span>
+        </span>
+        <button id="logout-button" class="button button-logout" type="button">Cerrar sesión</button>
       </div>
     </header>
 

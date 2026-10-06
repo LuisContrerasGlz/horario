@@ -9,6 +9,9 @@ const specialtyFilter = $('#specialty-filter');
 const scheduleGrid = $('#schedule-grid');
 const catalogDialog = $('#catalog-dialog');
 
+// Roles de `tipo_usuario` - deben coincidir con src/lib/auth.ts (§2.2).
+const ROLES = { SUPERADMIN: 1, ADMIN: 2, CAPTURA: 3, DOCENTE: 4, REVISOR: 5 };
+
 const state = {
   semesterId: null,
   semester: null,
@@ -26,7 +29,74 @@ const state = {
   catalogSort: { key: null, direction: 1 },
   selectedCatalogId: null,
   catalogEditorId: null,
+  currentUser: null,
 };
+
+// Catálogos sin acceso alguno para Administrador/Revisor (§2.2): usuarios,
+// tipos de usuario y estatus quedan reservados al Superadministrador.
+const CATALOGS_SUPERADMIN_ONLY = ['usuarios', 'tiposUsuario', 'statuses'];
+// Catálogos de sistema con acceso de solo lectura para Administrador/Revisor.
+const CATALOGS_ADMIN_READONLY = ['semestres', 'centrosTrabajo', 'bloques', 'turnos'];
+
+// Determina el nivel de acceso ('full' | 'readonly' | 'none') de un catálogo
+// para el usuario autenticado, según la matriz de permisos de §2.2.
+function getCatalogAccess(key) {
+  const role = state.currentUser?.tipo_usuario;
+  if (role === ROLES.SUPERADMIN) {
+    return 'full';
+  }
+  if (role === ROLES.ADMIN) {
+    if (CATALOGS_SUPERADMIN_ONLY.includes(key)) return 'none';
+    if (CATALOGS_ADMIN_READONLY.includes(key)) return 'readonly';
+    return 'full';
+  }
+  if (role === ROLES.REVISOR) {
+    return CATALOGS_SUPERADMIN_ONLY.includes(key) ? 'none' : 'readonly';
+  }
+  // Captura / Docente: sin acceso a la gestión de catálogos generales (§2.3.4).
+  return 'none';
+}
+
+// Revisor y Captura/Docente nunca pueden crear, editar ni eliminar nada (§2.3).
+function isGlobalReadOnly() {
+  const role = state.currentUser?.tipo_usuario;
+  return role === ROLES.REVISOR || role === ROLES.CAPTURA || role === ROLES.DOCENTE;
+}
+
+function renderCurrentUser() {
+  const user = state.currentUser;
+  if (!user) return;
+  $('#current-user-name').textContent = user.nombre;
+  const cctLabel = user.cct_codigo ? `${user.cct_codigo} · ${user.cct_nombre ?? ''}`.trim() : 'Todos los centros de trabajo';
+  $('#current-user-role').textContent = `${user.tipo_usuario_descripcion ?? ''} · ${cctLabel}`;
+}
+
+// Administrador y Revisor quedan fijos a su propio CCT (§2, restricción por CCT).
+function isCctRestrictedRole() {
+  const role = state.currentUser?.tipo_usuario;
+  return role === ROLES.ADMIN || role === ROLES.REVISOR;
+}
+
+async function loadCurrentUser() {
+  const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
+  if (!response.ok) {
+    window.location.replace('/login.html');
+    return false;
+  }
+  const body = await response.json();
+  state.currentUser = body.user;
+  renderCurrentUser();
+  return true;
+}
+
+async function logout() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+  } finally {
+    window.location.replace('/login.html');
+  }
+}
+
 
 const catalogDefinitions = {
   docentes: {
@@ -225,6 +295,11 @@ async function requestJson(url, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
   const response = await fetch(url, { credentials: 'same-origin', ...options, headers });
+  if (response.status === 401) {
+    // Sesión expirada o inválida: redirige de inmediato al login (§2.1/§2.4).
+    window.location.replace('/login.html');
+    throw new Error('Sesión expirada. Redirigiendo al inicio de sesión...');
+  }
   if (response.status === 204) {
     return null;
   }
@@ -327,7 +402,8 @@ function renderCargaControls() {
   const hoursLoading = Boolean(teacherSelect.value) && !state.teacherHours;
   const insufficientHours = Boolean(selectedMatter && state.teacherHours &&
     Number(state.teacherHours.horas_restantes) < Number(selectedMatter.horas));
-  $('#add-assignment').disabled = !selectedSemesterIsEditable() || !teacherSelect.value || !subjectSelect.value || !groupSelect.value || hoursLoading || insufficientHours;
+  $('#add-assignment').disabled = isGlobalReadOnly() || !selectedSemesterIsEditable() || !teacherSelect.value || !subjectSelect.value || !groupSelect.value || hoursLoading || insufficientHours;
+  $('#add-assignment').hidden = isGlobalReadOnly();
 }
 
 function renderTeacherHours() {
@@ -391,6 +467,10 @@ function renderCargaAssignments() {
 
 async function submitCarga(event) {
   event.preventDefault();
+  if (isGlobalReadOnly()) {
+    showMessage('Tu rol solo permite consultar la carga docente.', 'warning');
+    return;
+  }
   if (!selectedSemesterIsEditable()) {
     showMessage('El periodo está en consulta; no se pueden agregar asignaciones.', 'warning');
     return;
@@ -522,19 +602,23 @@ function renderScheduleGrid(grid) {
         const sameAssignment = Number(item.id_asignacion) === assignmentId;
         body += `<td><button class="schedule-cell is-occupied${sameAssignment ? ' is-selected-assignment' : ''}" type="button" data-day="${escapeHtml(day)}" data-block="${Number(block.id_bloque)}" data-assignment="${Number(item.id_asignacion)}" aria-label="${escapeHtml(day)}, ${blockLabel}: ${escapeHtml(item.docente_nombre)}, ${escapeHtml(item.nombre_materia)}"><strong>${escapeHtml(item.docente_nombre)}</strong><span>${escapeHtml(item.nombre_materia)}</span><small>${escapeHtml(item.nombre_grupo)}</small></button></td>`;
       } else {
-        body += `<td><button class="schedule-cell is-open" type="button" data-day="${escapeHtml(day)}" data-block="${Number(block.id_bloque)}" aria-label="Asignar ${escapeHtml(day)} ${blockLabel}" ${!assignmentId || !selectedSemesterIsEditable() ? 'disabled' : ''}><span class="cell-add" aria-hidden="true">+</span><span class="visually-hidden">Asignar</span></button></td>`;
+        body += `<td><button class="schedule-cell is-open" type="button" data-day="${escapeHtml(day)}" data-block="${Number(block.id_bloque)}" aria-label="Asignar ${escapeHtml(day)} ${blockLabel}" ${!assignmentId || isGlobalReadOnly() || !selectedSemesterIsEditable() ? 'disabled' : ''}><span class="cell-add" aria-hidden="true">+</span><span class="visually-hidden">Asignar</span></button></td>`;
       }
     }
     body += '</tr>';
   }
 
   scheduleGrid.innerHTML = `<table class="schedule-table"><thead><tr><th scope="col">Hora</th>${days.map((day) => `<th scope="col">${escapeHtml(day)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
-  if (!selectedSemesterIsEditable()) {
+  if (!selectedSemesterIsEditable() || isGlobalReadOnly()) {
     scheduleGrid.querySelectorAll('.schedule-cell').forEach((cell) => { cell.disabled = true; });
   }
 }
 
 async function toggleScheduleCell(button) {
+  if (isGlobalReadOnly()) {
+    showMessage('Tu rol solo permite consultar los horarios.', 'warning');
+    return;
+  }
   if (!selectedSemesterIsEditable()) {
     showMessage('El periodo está en consulta; no se pueden modificar horarios.', 'warning');
     return;
@@ -566,9 +650,10 @@ async function toggleScheduleCell(button) {
 function renderCatalogSelection() {
   const previous = $('#catalog-select').value;
   $('#catalog-select').innerHTML = Object.entries(catalogDefinitions)
+    .filter(([key]) => getCatalogAccess(key) !== 'none')
     .map(([key, definition]) => `<option value="${key}">${escapeHtml(definition.label)}</option>`)
     .join('');
-  if (catalogDefinitions[previous]) {
+  if (catalogDefinitions[previous] && getCatalogAccess(previous) !== 'none') {
     $('#catalog-select').value = previous;
   }
 }
@@ -584,7 +669,7 @@ function catalogEndpoint(definition) {
 
 async function loadCatalogRows(key = $('#catalog-select').value) {
   const definition = catalogDefinitions[key];
-  if (!definition) {
+  if (!definition || getCatalogAccess(key) === 'none') {
     return;
   }
   state.catalogDescriptor = definition;
@@ -594,9 +679,10 @@ async function loadCatalogRows(key = $('#catalog-select').value) {
     state.catalogPage = 0;
     state.catalogSort = { key: null, direction: 1 };
     state.selectedCatalogId = null;
-    $('#catalog-new').hidden = !definition.mutable;
-    $('#catalog-edit').hidden = !definition.mutable;
-    $('#catalog-delete').hidden = !definition.mutable;
+    const canWrite = definition.mutable && getCatalogAccess(key) === 'full' && !isGlobalReadOnly();
+    $('#catalog-new').hidden = !canWrite;
+    $('#catalog-edit').hidden = !canWrite;
+    $('#catalog-delete').hidden = !canWrite;
     $('#catalog-delete').textContent = definition.softDelete ? 'Dar de baja' : 'Eliminar';
     renderCatalogFieldOptions();
     renderCatalogTable();
@@ -692,6 +778,15 @@ function renderCatalogEditor(record = {}) {
     const value = record[field.sourceKey ?? field.key] ?? '';
     const isRequired = field.required && !(field.key === 'password' && state.catalogEditorId !== null);
     const attributes = `${isRequired ? 'required' : ''} ${field.maxLength ? `maxlength="${field.maxLength}"` : ''} ${field.minLength ? `minlength="${field.minLength}"` : ''} ${field.min !== undefined ? `min="${field.min}"` : ''} ${field.max !== undefined ? `max="${field.max}"` : ''}`;
+    // Administrador/Revisor: el CCT queda fijo al de su sesión (§2). El
+    // backend vuelve a forzarlo de cualquier forma (cctMiddleware).
+    if (field.key === 'id_cct' && isCctRestrictedRole()) {
+      const lockedCct = state.currentUser.id_ct;
+      const lockedLabel = state.currentUser.cct_codigo
+        ? `${state.currentUser.cct_codigo} · ${state.currentUser.cct_nombre ?? ''}`
+        : 'Centro de trabajo asignado';
+      return `<label>${escapeHtml(field.label)}<select disabled><option>${escapeHtml(lockedLabel)}</option></select><input type="hidden" name="id_cct" value="${escapeHtml(lockedCct)}"></label>`;
+    }
     if (field.type === 'select') {
       const options = field.options
         ? field.options.map(([optionValue, label]) => `<option value="${escapeHtml(optionValue)}" ${String(value) === String(optionValue) ? 'selected' : ''}>${escapeHtml(label)}</option>`)
@@ -879,6 +974,11 @@ function bindEvents() {
 }
 
 async function bootstrap() {
+  const authenticated = await loadCurrentUser();
+  if (!authenticated) {
+    return;
+  }
+  $('#logout-button').addEventListener('click', logout);
   bindEvents();
   try {
     const [semesters, session] = await Promise.all([

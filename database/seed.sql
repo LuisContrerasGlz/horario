@@ -14,7 +14,8 @@ INSERT INTO `tipo_usuario` (`id_tipo_usuario`, `descripcion`) VALUES
   (1, 'Super Administrador'),
   (2, 'Administrador'),
   (3, 'Captura'),
-  (4, 'Docente')
+  (4, 'Docente'),
+  (5, 'Revisor')
 ON DUPLICATE KEY UPDATE `descripcion` = VALUES(`descripcion`);
 
 INSERT INTO `turno` (`id_turno`, `Descripcion`) VALUES

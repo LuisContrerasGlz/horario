@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#183b3b" />
+    <title>sis_doc | Iniciar sesión</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="login-body">
+    <main class="login-shell">
+      <section class="login-card" aria-labelledby="login-title">
+        <div class="brand login-brand">
+          <span class="brand-mark" aria-hidden="true">SD</span>
+          <span class="brand-copy">
+            <span class="brand-name">sis_doc</span>
+            <span class="brand-caption">Servicios docentes - CORM</span>
+          </span>
+        </div>
+        <h1 id="login-title">Iniciar sesión</h1>
+        <p class="login-subtitle">Ingresa tu correo electrónico y contraseña para continuar.</p>
+
+        <form id="login-form" class="login-form" novalidate>
+          <label for="login-email">Correo electrónico
+            <input id="login-email" name="correo_electronico" type="email" autocomplete="username" required />
+          </label>
+          <label for="login-password">Contraseña
+            <input id="login-password" name="password" type="password" autocomplete="current-password" required />
+          </label>
+          <button id="login-submit" class="button button-primary login-submit" type="submit">Entrar</button>
+        </form>
+
+        <p id="login-message" class="app-message login-message" role="alert" hidden></p>
+      </section>
+    </main>
+    <script src="/login.js"></script>
+  </body>
+</html>

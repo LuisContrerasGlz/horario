@@ -11,6 +11,26 @@ import {
 
 const DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
+// Restricción por CCT (§2): `cctMiddleware` (src/lib/auth.ts) ya forzó
+// `req.query.id_cct`/`req.body.id_cct` al CCT de sesión para Administrador y
+// Revisor, y rechazó cualquier intento explícito de usar otro CCT con 403.
+// Aquí solo leemos ese valor (o el filtro opcional del Superadministrador)
+// para acotar lecturas/escrituras y para volver a validar registros ya
+// existentes antes de editarlos o eliminarlos.
+function getRequestCct(req: any): number | null {
+  const raw = req.query?.id_cct ?? req.body?.id_cct;
+  if (raw === undefined || raw === null || raw === '') {
+    return null;
+  }
+  const value = Number(raw);
+  return Number.isSafeInteger(value) ? value : null;
+}
+
+function cctMismatch(req: any, recordCct: unknown): boolean {
+  const requested = getRequestCct(req);
+  return requested !== null && Number(recordCct) !== requested;
+}
+
 // ---------------------------------------------------------------------------
 // Consultas SQL directas contra el esquema real de `sis_doc`.
 // NOTA: `semestre` no tiene columna `activo`, el estado se determina por
@@ -85,44 +105,67 @@ const HORARIO_SELECT = `
 // ---------------------------------------------------------------------------
 
 // Resuelve el semestre activo: id_status = 1 ("Activo"); si ninguno está
-// marcado como activo, cae al más reciente por fecha_inicio.
-async function getSemesterById(id?: number | null) {
+// marcado como activo, cae al más reciente por fecha_inicio. `effectiveCct`
+// acota la búsqueda al CCT de Administrador/Revisor (§2, restricción por CCT).
+async function getSemesterById(id?: number | null, effectiveCct?: number | null) {
   if (id !== undefined && id !== null) {
     const semesterId = Number(id);
     if (!Number.isSafeInteger(semesterId) || semesterId <= 0) {
       return null;
     }
-    const [rows] = await query<any>(`${SEMESTER_SELECT} WHERE vs.id_semestre = ? LIMIT 1`, [semesterId]);
+    const conditions = ['vs.id_semestre = ?'];
+    const params: number[] = [semesterId];
+    if (effectiveCct) {
+      conditions.push('vs.id_cct = ?');
+      params.push(effectiveCct);
+    }
+    const [rows] = await query<any>(`${SEMESTER_SELECT} WHERE ${conditions.join(' AND ')} LIMIT 1`, params);
     return rows[0] ?? null;
   }
 
-  const [activeRows] = await query<any>(`${SEMESTER_SELECT} WHERE vs.id_status = 1 ORDER BY vs.fecha_inicio DESC LIMIT 1`);
+  const cctCondition = effectiveCct ? ' AND vs.id_cct = ?' : '';
+  const cctParams = effectiveCct ? [effectiveCct] : [];
+  const [activeRows] = await query<any>(
+    `${SEMESTER_SELECT} WHERE vs.id_status = 1${cctCondition} ORDER BY vs.fecha_inicio DESC LIMIT 1`,
+    cctParams
+  );
   if (activeRows[0]) {
     return activeRows[0];
   }
 
-  const [recentRows] = await query<any>(`${SEMESTER_SELECT} ORDER BY vs.fecha_inicio DESC LIMIT 1`);
+  const [recentRows] = await query<any>(
+    `${SEMESTER_SELECT}${effectiveCct ? ' WHERE vs.id_cct = ?' : ''} ORDER BY vs.fecha_inicio DESC LIMIT 1`,
+    cctParams
+  );
   return recentRows[0] ?? null;
 }
 
 // Resuelve el semestre a usar en una solicitud: query param > sesión > activo en BD.
+// Acota el resultado al CCT efectivo de la petición (forzado por cctMiddleware
+// para Administrador/Revisor) para que un semestre de otro CCT jamás se resuelva.
 async function resolveRequestSemester(req: any) {
+  const effectiveCct = getRequestCct(req);
   const requestedId = req.query.semesterId ?? req.body?.id_semestre ?? req.session?.activeSemesterId;
   return requestedId === undefined || requestedId === null || requestedId === ''
-    ? getSemesterById()
-    : getSemesterById(Number(requestedId));
+    ? getSemesterById(undefined, effectiveCct)
+    : getSemesterById(Number(requestedId), effectiveCct);
 }
 
-function registerReadOnlyCatalogRoutes(router: Router, path: string, listSql: string, detailSql: string) {
-  router.get(`/${path}`, async (_req, res) => {
+function registerReadOnlyCatalogRoutes(router: Router, path: string, listSql: string, detailSql: string, cctColumn?: string) {
+  router.get(`/${path}`, async (req, res) => {
     const [rows] = await query<any>(listSql);
-    res.json(rows);
+    const requestedCct = cctColumn ? getRequestCct(req) : null;
+    const filtered = requestedCct !== null ? rows.filter((row: any) => Number(row[cctColumn!]) === requestedCct) : rows;
+    res.json(filtered);
   });
 
   router.get(`/${path}/:id`, async (req, res) => {
     const [rows] = await query<any>(detailSql, [Number(req.params.id)]);
     if (!rows[0]) {
       return res.status(404).json({ message: 'Registro no encontrado.' });
+    }
+    if (cctColumn && cctMismatch(req, rows[0][cctColumn])) {
+      return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de este registro.', code: 'FORBIDDEN_CCT' });
     }
     res.json(rows[0]);
   });
@@ -137,10 +180,13 @@ type CatalogCrudConfig = {
   detailSql: string;
   validate?: (body: any) => string | null;
   softDelete?: { column: string; value: number };
+  // Columna que identifica el centro de trabajo del registro, para acotar
+  // lecturas/escrituras de Administrador/Revisor a su propio CCT (§2).
+  cctColumn?: string;
 };
 
 function registerCatalogCrudRoutes(router: Router, config: CatalogCrudConfig) {
-  registerReadOnlyCatalogRoutes(router, config.path, config.listSql, config.detailSql);
+  registerReadOnlyCatalogRoutes(router, config.path, config.listSql, config.detailSql, config.cctColumn);
 
   router.post(`/${config.path}`, async (req, res) => {
     const validationError = config.validate?.(req.body);
@@ -171,6 +217,15 @@ function registerCatalogCrudRoutes(router: Router, config: CatalogCrudConfig) {
       return res.status(400).json({ message: 'Identificador no válido.' });
     }
     try {
+      if (config.cctColumn) {
+        const [existingRows] = await query<any>(config.detailSql, [id]);
+        if (!existingRows[0]) {
+          return res.status(404).json({ message: 'Registro no encontrado.' });
+        }
+        if (cctMismatch(req, existingRows[0][config.cctColumn])) {
+          return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de este registro.', code: 'FORBIDDEN_CCT' });
+        }
+      }
       const values = config.fields.map((field) => req.body[field] ?? null);
       await query(
         `UPDATE ${config.table} SET ${config.fields.map((field) => `${field} = ?`).join(', ')} WHERE ${config.idColumn} = ?`,
@@ -193,6 +248,18 @@ function registerCatalogCrudRoutes(router: Router, config: CatalogCrudConfig) {
       return res.status(400).json({ message: 'Identificador no válido.' });
     }
     try {
+      if (config.cctColumn) {
+        const [existingRows] = await query<any>(
+          `SELECT ${config.idColumn}, ${config.cctColumn} FROM ${config.table} WHERE ${config.idColumn} = ? LIMIT 1`,
+          [id]
+        );
+        if (!existingRows[0]) {
+          return res.status(404).json({ message: 'Registro no encontrado.' });
+        }
+        if (cctMismatch(req, existingRows[0][config.cctColumn])) {
+          return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de este registro.', code: 'FORBIDDEN_CCT' });
+        }
+      }
       if (config.softDelete) {
         const [rows] = await query<any>(
           `SELECT ${config.idColumn} FROM ${config.table} WHERE ${config.idColumn} = ? LIMIT 1`,
@@ -318,13 +385,16 @@ export function buildApiRouter() {
   // -------------------------------------------------------------------
   // Semestre activo (contexto global) - §2.1
   // -------------------------------------------------------------------
-  router.get('/semestres', async (_req, res) => {
-    const [rows] = await query<any>(`${SEMESTER_SELECT} ORDER BY vs.fecha_inicio DESC`);
+  router.get('/semestres', async (req, res) => {
+    const effectiveCct = getRequestCct(req);
+    const [rows] = effectiveCct
+      ? await query<any>(`${SEMESTER_SELECT} WHERE vs.id_cct = ? ORDER BY vs.fecha_inicio DESC`, [effectiveCct])
+      : await query<any>(`${SEMESTER_SELECT} ORDER BY vs.fecha_inicio DESC`);
     res.json(rows);
   });
 
   router.get('/semestres/:id', async (req, res) => {
-    const semester = await getSemesterById(Number(req.params.id));
+    const semester = await getSemesterById(Number(req.params.id), getRequestCct(req));
     if (!semester) {
       return res.status(404).json({ message: 'Semestre no encontrado.' });
     }
@@ -443,6 +513,7 @@ export function buildApiRouter() {
     path: 'centros-trabajo',
     table: 'centro_trabajo',
     idColumn: 'id_cct',
+    cctColumn: 'id_cct',
     fields: ['CCT', 'Nombre'],
     listSql: 'SELECT id_cct, CCT, Nombre FROM centro_trabajo ORDER BY Nombre',
     detailSql: 'SELECT id_cct, CCT, Nombre FROM centro_trabajo WHERE id_cct = ? LIMIT 1',
@@ -458,6 +529,7 @@ export function buildApiRouter() {
     path: 'academias',
     table: 'academia',
     idColumn: 'id_academia',
+    cctColumn: 'id_cct',
     fields: ['nombre_academia', 'nombre_corto', 'id_especialidad', 'id_cct', 'id_status'],
     listSql: 'SELECT * FROM vista_academias ORDER BY nombre_academia',
     detailSql: 'SELECT * FROM vista_academias WHERE id_academia = ? LIMIT 1',
@@ -474,6 +546,7 @@ export function buildApiRouter() {
     path: 'especialidades',
     table: 'especialidad',
     idColumn: 'id_especialidad',
+    cctColumn: 'id_cct',
     fields: ['nombre_especialidad', 'nombre_corto', 'id_cct'],
     listSql: `SELECT e.id_especialidad, e.nombre_especialidad, e.nombre_corto, e.id_cct,
                      ct.CCT, ct.Nombre AS centro_trabajo
@@ -750,8 +823,11 @@ export function buildApiRouter() {
     }
   });
 
-  router.get('/docentes', async (_req, res) => {
-    const [rows] = await query<any>(`${DOCENTE_SELECT} ORDER BY vd.Apellido_pat, vd.Apellido_mat, vd.Nombre`);
+  router.get('/docentes', async (req, res) => {
+    const effectiveCct = getRequestCct(req);
+    const [rows] = effectiveCct
+      ? await query<any>(`${DOCENTE_SELECT} WHERE vd.id_cct = ? ORDER BY vd.Apellido_pat, vd.Apellido_mat, vd.Nombre`, [effectiveCct])
+      : await query<any>(`${DOCENTE_SELECT} ORDER BY vd.Apellido_pat, vd.Apellido_mat, vd.Nombre`);
     res.json(rows);
   });
 
@@ -759,6 +835,9 @@ export function buildApiRouter() {
     const [rows] = await query<any>(`${DOCENTE_SELECT} WHERE vd.id_docente = ? LIMIT 1`, [Number(req.params.id)]);
     if (!rows[0]) {
       return res.status(404).json({ message: 'Docente no encontrado.' });
+    }
+    if (cctMismatch(req, rows[0].id_cct)) {
+      return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de este docente.', code: 'FORBIDDEN_CCT' });
     }
     res.json(rows[0]);
   });
@@ -797,6 +876,13 @@ export function buildApiRouter() {
       return res.status(400).json({ message: 'Las horas del docente no son válidas.', errors: hoursValidation.errors });
     }
     try {
+      const [existingRows] = await query<any>('SELECT id_cct FROM docente WHERE id_docente = ? LIMIT 1', [id]);
+      if (!existingRows[0]) {
+        return res.status(404).json({ message: 'Docente no encontrado.' });
+      }
+      if (cctMismatch(req, existingRows[0].id_cct)) {
+        return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de este docente.', code: 'FORBIDDEN_CCT' });
+      }
       const setClause = DOCENTE_FIELDS.map((field) => `${field} = ?`).join(', ');
       const values = DOCENTE_FIELDS.map((field) => req.body[field] ?? null);
       await query(`UPDATE docente SET ${setClause} WHERE id_docente = ?`, [...values, id]);
@@ -814,9 +900,12 @@ export function buildApiRouter() {
   router.delete('/docentes/:id', async (req, res) => {
     try {
       const id = Number(req.params.id);
-      const [rows] = await query<any>('SELECT id_docente FROM docente WHERE id_docente = ? LIMIT 1', [id]);
+      const [rows] = await query<any>('SELECT id_docente, id_cct FROM docente WHERE id_docente = ? LIMIT 1', [id]);
       if (!rows[0]) {
         return res.status(404).json({ message: 'Docente no encontrado.' });
+      }
+      if (cctMismatch(req, rows[0].id_cct)) {
+        return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de este docente.', code: 'FORBIDDEN_CCT' });
       }
       await query('UPDATE docente SET id_status = 5 WHERE id_docente = ?', [id]);
       res.status(204).send();
@@ -834,7 +923,10 @@ export function buildApiRouter() {
       return res.status(400).json({ message: 'Semestre no válido o no disponible.' });
     }
     if (req.query.all === '1') {
-      const [allRows] = await query<any>(`${MATERIA_SELECT} ORDER BY vm.nombre_materia`);
+      const effectiveCct = getRequestCct(req);
+      const [allRows] = effectiveCct
+        ? await query<any>(`${MATERIA_SELECT} WHERE vm.id_cct = ? ORDER BY vm.nombre_materia`, [effectiveCct])
+        : await query<any>(`${MATERIA_SELECT} ORDER BY vm.nombre_materia`);
       return res.json(allRows);
     }
     const filter = buildMateriaListFilter(semester, req.query.grupoId);
@@ -852,6 +944,9 @@ export function buildApiRouter() {
     const [rows] = await query<any>(`${MATERIA_SELECT} WHERE vm.id_materia = ? LIMIT 1`, [Number(req.params.id)]);
     if (!rows[0]) {
       return res.status(404).json({ message: 'Materia no encontrada.' });
+    }
+    if (cctMismatch(req, rows[0].id_cct)) {
+      return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de esta materia.', code: 'FORBIDDEN_CCT' });
     }
     res.json(rows[0]);
   });
@@ -890,6 +985,13 @@ export function buildApiRouter() {
       return res.status(400).json({ message: tipoError });
     }
     try {
+      const [existingRows] = await query<any>('SELECT id_cct FROM materia WHERE id_materia = ? LIMIT 1', [id]);
+      if (!existingRows[0]) {
+        return res.status(404).json({ message: 'Materia no encontrada.' });
+      }
+      if (cctMismatch(req, existingRows[0].id_cct)) {
+        return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de esta materia.', code: 'FORBIDDEN_CCT' });
+      }
       const setClause = MATERIA_FIELDS.map((field) => `${field} = ?`).join(', ');
       const values = MATERIA_FIELDS.map((field) => req.body[field] ?? null);
       await query(`UPDATE materia SET ${setClause} WHERE id_materia = ?`, [...values, id]);
@@ -907,9 +1009,12 @@ export function buildApiRouter() {
   router.delete('/materias/:id', async (req, res) => {
     try {
       const id = Number(req.params.id);
-      const [rows] = await query<any>('SELECT id_materia FROM materia WHERE id_materia = ? LIMIT 1', [id]);
+      const [rows] = await query<any>('SELECT id_materia, id_cct FROM materia WHERE id_materia = ? LIMIT 1', [id]);
       if (!rows[0]) {
         return res.status(404).json({ message: 'Materia no encontrada.' });
+      }
+      if (cctMismatch(req, rows[0].id_cct)) {
+        return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de esta materia.', code: 'FORBIDDEN_CCT' });
       }
       await query('UPDATE materia SET id_status = 5 WHERE id_materia = ?', [id]);
       res.status(204).send();
@@ -925,7 +1030,10 @@ export function buildApiRouter() {
       return res.status(400).json({ message: 'Semestre no válido o no disponible.' });
     }
     if (req.query.all === '1') {
-      const [allRows] = await query<any>(`${GRUPO_SELECT} ORDER BY vg.semestre, vg.grupo`);
+      const effectiveCct = getRequestCct(req);
+      const [allRows] = effectiveCct
+        ? await query<any>(`${GRUPO_SELECT} WHERE vg.id_cct = ? ORDER BY vg.semestre, vg.grupo`, [effectiveCct])
+        : await query<any>(`${GRUPO_SELECT} ORDER BY vg.semestre, vg.grupo`);
       return res.json(allRows);
     }
     const filter = buildGrupoListFilter(semester, req.query.materiaId);
@@ -943,6 +1051,9 @@ export function buildApiRouter() {
     const [rows] = await query<any>(`${GRUPO_SELECT} WHERE vg.id_grupo = ? LIMIT 1`, [Number(req.params.id)]);
     if (!rows[0]) {
       return res.status(404).json({ message: 'Grupo no encontrado.' });
+    }
+    if (cctMismatch(req, rows[0].id_cct)) {
+      return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de este grupo.', code: 'FORBIDDEN_CCT' });
     }
     res.json(rows[0]);
   });
@@ -981,6 +1092,13 @@ export function buildApiRouter() {
       return res.status(400).json({ message: tipoError });
     }
     try {
+      const [existingRows] = await query<any>('SELECT id_cct FROM grupo WHERE id_grupo = ? LIMIT 1', [id]);
+      if (!existingRows[0]) {
+        return res.status(404).json({ message: 'Grupo no encontrado.' });
+      }
+      if (cctMismatch(req, existingRows[0].id_cct)) {
+        return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de este grupo.', code: 'FORBIDDEN_CCT' });
+      }
       const setClause = GRUPO_FIELDS.map((field) => `${field} = ?`).join(', ');
       const values = GRUPO_FIELDS.map((field) => req.body[field] ?? null);
       await query(`UPDATE grupo SET ${setClause} WHERE id_grupo = ?`, [...values, id]);
@@ -997,8 +1115,16 @@ export function buildApiRouter() {
 
   router.delete('/grupos/:id', async (req, res) => {
     try {
+      const id = Number(req.params.id);
+      const [existingRows] = await query<any>('SELECT id_cct FROM grupo WHERE id_grupo = ? LIMIT 1', [id]);
+      if (!existingRows[0]) {
+        return res.status(404).json({ message: 'Grupo no encontrado.' });
+      }
+      if (cctMismatch(req, existingRows[0].id_cct)) {
+        return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de este grupo.', code: 'FORBIDDEN_CCT' });
+      }
       const [result] = (await query<{ affectedRows: number }>('DELETE FROM grupo WHERE id_grupo = ?', [
-        Number(req.params.id),
+        id,
       ])) as [{ affectedRows: number }, any];
       if (!result.affectedRows) {
         return res.status(404).json({ message: 'Grupo no encontrado.' });
@@ -1284,14 +1410,20 @@ export function buildApiRouter() {
       return res.status(400).json({ message: 'Semestre no válido o no disponible.' });
     }
     const semesterId = Number(selectedSemester.id_semestre);
+    // Superadministrador: libre por CCT (usa el del semestre seleccionado por
+    // defecto). Administrador/Revisor: siempre acotados a su propio CCT (§2).
+    const effectiveCct = getRequestCct(req) ?? Number(selectedSemester.id_cct);
 
     const [docentes] = await query<any>(
       `${DOCENTE_SELECT} WHERE vd.id_cct = ? ORDER BY vd.Apellido_pat, vd.Apellido_mat, vd.Nombre`,
-      [selectedSemester.id_cct]
+      [effectiveCct]
     );
     const [bloques] = await query<any>(`${BLOQUE_SELECT} ORDER BY b.codigo_bloque`);
     const [turnos] = await query<any>(`${TURNO_SELECT} ORDER BY Descripcion`);
-    const [semestres] = await query<any>(`${SEMESTER_SELECT} ORDER BY vs.fecha_inicio DESC`);
+    const cctFilterForRequest = getRequestCct(req);
+    const [semestres] = cctFilterForRequest
+      ? await query<any>(`${SEMESTER_SELECT} WHERE vs.id_cct = ? ORDER BY vs.fecha_inicio DESC`, [cctFilterForRequest])
+      : await query<any>(`${SEMESTER_SELECT} ORDER BY vs.fecha_inicio DESC`);
 
     const materiaFilter = buildMateriaListFilter(selectedSemester, req.query.grupoId);
     if (materiaFilter.error) {
@@ -1309,15 +1441,22 @@ export function buildApiRouter() {
       `${GRUPO_SELECT} WHERE ${grupoFilter.conditions.join(' AND ')} ORDER BY vg.semestre, vg.grupo`,
       grupoFilter.params
     );
-    const [centrosTrabajo] = await query<any>('SELECT id_cct, CCT, Nombre FROM centro_trabajo ORDER BY Nombre');
+    const [centrosTrabajo] = cctFilterForRequest
+      ? await query<any>('SELECT id_cct, CCT, Nombre FROM centro_trabajo WHERE id_cct = ? ORDER BY Nombre', [cctFilterForRequest])
+      : await query<any>('SELECT id_cct, CCT, Nombre FROM centro_trabajo ORDER BY Nombre');
     const [especialidades] = await query<any>(
       `SELECT e.id_especialidad, e.nombre_especialidad, e.nombre_corto, e.id_cct,
               ct.CCT, ct.Nombre AS centro_trabajo
          FROM especialidad e
          LEFT JOIN centro_trabajo ct ON ct.id_cct = e.id_cct
-        ORDER BY e.nombre_especialidad`
+        ${cctFilterForRequest ? 'WHERE e.id_cct = ?' : ''}
+        ORDER BY e.nombre_especialidad`,
+      cctFilterForRequest ? [cctFilterForRequest] : []
     );
-    const [academias] = await query<any>('SELECT * FROM vista_academias ORDER BY nombre_academia');
+    const [academias] = await query<any>(
+      `SELECT * FROM vista_academias ${cctFilterForRequest ? 'WHERE id_cct = ?' : ''} ORDER BY nombre_academia`,
+      cctFilterForRequest ? [cctFilterForRequest] : []
+    );
     const [statuses] = await query<any>('SELECT id_status, descripcion FROM status ORDER BY descripcion');
     const [tiposUsuario] = await query<any>(
       'SELECT id_tipo_usuario, descripcion FROM tipo_usuario ORDER BY descripcion'
@@ -1430,6 +1569,9 @@ export function buildApiRouter() {
     const docente = docenteRows[0];
     if (!docente) {
       return res.status(404).json({ message: 'Docente no encontrado.' });
+    }
+    if (cctMismatch(req, docente.id_cct)) {
+      return res.status(403).json({ message: 'No tiene acceso al centro de trabajo (CCT) de este docente.', code: 'FORBIDDEN_CCT' });
     }
 
     const [asignadasRows] = await query<any>(
