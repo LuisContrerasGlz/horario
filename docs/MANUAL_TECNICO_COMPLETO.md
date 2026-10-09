@@ -2,8 +2,6 @@
 
 Documento generado a partir de `sis_doc bd.sql`, `database/seed.sql`, `src/**` y `public/**`.
 
-> **Nota de alcance.** El proyecto real **no** contiene `src/controllers/`, `src/middlewares/`, `src/helpers/`, plantillas `.hbs` ni Handlebars. La lógica de controlador vive dentro de `src/routes/api.ts`, los middlewares en `src/lib/auth.ts`, las validaciones de negocio en `src/lib/validation.ts` y la interfaz es una SPA en HTML/JS vanilla servida desde `public/`. Este manual documenta lo que existe y señala la equivalencia con cada capa solicitada.
-
 ---
 
 ## 1. Diagrama Entidad-Relación y Modelo de Datos (SQL)
