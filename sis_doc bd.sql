@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 01-10-2026 a las 22:28:41
+-- Tiempo de generación: 09-10-2026 a las 23:03:04
 -- Versión del servidor: 10.4.28-MariaDB
 -- Versión de PHP: 8.1.17
 
@@ -134,6 +134,19 @@ CREATE TABLE `asignacion_docente` (
   `id_grupo` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Volcado de datos para la tabla `asignacion_docente`
+--
+
+INSERT INTO `asignacion_docente` (`id_asignacion`, `id_semestre`, `id_docente`, `id_materia`, `id_grupo`) VALUES
+(7, 2, 5, 19, 67),
+(5, 2, 5, 51, 21),
+(6, 2, 5, 53, 21),
+(4, 2, 24, 18, 67),
+(1, 2, 24, 39, 55),
+(2, 2, 24, 44, 55),
+(3, 2, 24, 52, 21);
+
 -- --------------------------------------------------------
 
 --
@@ -222,7 +235,7 @@ INSERT INTO `docente` (`id_docente`, `RFC`, `Nombre`, `Apellido_pat`, `Apellido_
 (2, 'AEDL710625ST0', 'LUZ AURORA', 'ALENCASTRO', 'DURON', 'I', 'e_dusa@hotmail.com', '4491099168', 0, 0, 3, 1, 1),
 (3, 'BAMC7409035Q3', 'CARMEN ROSALBA', 'BARBA', 'MACIAS', 'I', 'rosalba.barba@hotmail.com', '4491141784', 0, 0, 3, 1, 1),
 (4, 'COMA5812092Z5', 'ARTURO', 'CORONA', 'MONTES', 'M', 'anlope85@hotmail.com', '4492321141', 0, 0, 1, 1, 1),
-(5, 'DIVG880109DG9', 'GERARDO JESUS', 'DIAZ', 'VELA', 'V', 'gerardo.diaz.vela@gmail.com', '4492094476', 0, 0, 2, 1, 1),
+(5, 'DIVG880109DG9', 'GERARDO JESUS', 'DIAZ', 'VELA', 'V', 'gerardo.diaz.vela@gmail.com', '4492094476', 19, 0, 2, 1, 1),
 (6, 'DILM771216LS9', 'MARCELA ESTHELA', 'DIAZ', 'LIMON', 'M', 'markiela3012@hotmail.com', '', 0, 0, 1, 1, 1),
 (7, 'DOLP721020I52', 'PEDRO', 'DOMINGUEZ', 'LOPEZ', 'M', 'yopedro72@live.com.mx', '', 0, 0, 1, 1, 1),
 (8, 'DUME680417TW0', 'ELBA ELIZABETH', 'DURON', 'MACIAS', 'I', 'eliz_duron@yahoo.com.mx', '', 0, 0, 3, 1, 1),
@@ -371,7 +384,30 @@ INSERT INTO `grupo` (`id_grupo`, `semestre`, `grupo`, `id_especialidad`, `id_cct
 (46, 5, 'J', 3, 1, 2, 'N'),
 (47, 5, 'K', 4, 1, 2, 'N'),
 (48, 5, 'L', 3, 1, 2, 'N'),
-(49, 4, 'A', 1, 1, 1, 'P');
+(49, 4, 'A', 1, 1, 1, 'P'),
+(50, 4, 'B', 2, 1, 1, 'P'),
+(51, 4, 'C', 2, 1, 1, 'P'),
+(52, 4, 'D', 4, 1, 1, 'P'),
+(53, 4, 'E', 4, 1, 1, 'P'),
+(54, 4, 'F', 3, 1, 1, 'P'),
+(55, 4, 'G', 1, 1, 2, 'P'),
+(56, 4, 'H', 2, 1, 2, 'P'),
+(57, 4, 'I', 3, 1, 2, 'P'),
+(58, 4, 'J', 3, 1, 2, 'P'),
+(59, 4, 'K', 4, 1, 2, 'P'),
+(60, 4, 'L', 4, 1, 2, 'P'),
+(61, 6, 'A', 1, 1, 1, 'P'),
+(62, 6, 'B', 2, 1, 1, 'P'),
+(63, 6, 'C', 2, 1, 1, 'P'),
+(64, 6, 'D', 4, 1, 1, 'P'),
+(65, 6, 'E', 4, 1, 1, 'P'),
+(66, 6, 'F', 3, 1, 1, 'P'),
+(67, 6, 'G', 1, 1, 2, 'P'),
+(68, 6, 'H', 2, 1, 2, 'P'),
+(69, 6, 'I', 3, 1, 2, 'P'),
+(70, 6, 'J', 3, 1, 2, 'P'),
+(71, 6, 'K', 4, 1, 2, 'P'),
+(72, 6, 'L', 4, 1, 2, 'P');
 
 -- --------------------------------------------------------
 
@@ -454,13 +490,13 @@ INSERT INTO `materia` (`id_materia`, `nombre`, `nombre_corto`, `semestre`, `hora
 (43, 'TEMAS DE FISICA', 'TEM. FISICA', 6, 5, 'P', 1, 1, 1),
 (44, 'IMPLEMENTA BASE DE DATOS RELACIONALES EN UN SISTEMA DE INFORMACI?N', 'IMPLE BD REL SI', 4, 9, 'P', 3, 1, 1),
 (45, 'MATEMATICAS APLICADAS', 'MAT. APL.', 6, 5, 'P', 1, 1, 1),
-(46, 'BIOLOGIA CONTEMPORANEA', 'BIOLOGIA C.', 6, 5, 'P', 1, 1, 1),
+(46, 'BIOLOGIA CONTEMPORANEA', 'BIOLOGIA C.', 6, 5, 'P', 13, 1, 1),
 (47, 'CIENCIAS SOCIALES II', 'CIEN SOC  II', 2, 2, 'P', 1, 1, 1),
 (48, 'CIENCIAS SOCIALES III', 'CIEN SOC  III', 4, 2, 'P', 1, 1, 1),
 (49, 'CONCIENCIA HIST?RICA I. PERSPECTIVAS DEL MXICO ANTIGUO EN LOS CONTEXTOS GLOBALES', 'CONC HIST I', 4, 3, 'P', 1, 1, 1),
 (50, 'CULTURA DIGITAL II', 'CULT DIGITAL II', 2, 2, 'P', 1, 1, 1),
-(51, 'DISE¥A SOFTWARE DE SISTEMAS INFORM?TICOS', 'DISE¥A SOFT SI', 2, 5, 'P', 3, 1, 1),
-(52, 'CODIFICA SOFTWARE DE SISTEMAS INFORM?TICOS', 'CODIFICA SOFT SI', 2, 7, 'P', 3, 1, 1),
+(51, 'DISEÑA SOFTWARE DE SISTEMAS INFORMATICOS', 'DIS.SOFT.SI', 2, 5, 'P', 3, 1, 1),
+(52, 'CODIFICA SOFTWARE DE SISTEMAS INFORMATICOS', 'CODIFICA SOFT SI', 2, 7, 'P', 3, 1, 1),
 (53, 'IMPLEMENTA SOFTWARE DE SISTEMAS INFORM?TICOS', 'IMPLEMENTA SOFT SI', 2, 5, 'P', 3, 1, 1),
 (54, 'PENSAMIENTO MATEM?TICO II', 'PENS. MATE. II', 2, 4, 'P', 1, 1, 1),
 (55, 'MANTIENE EL SISTEMA DE INYECCI?N ELECTR?NICA DE LOS MOTORES DE GASOLINA Y DISEL', 'MSIEMGD', 4, 7, 'P', 4, 1, 1),
@@ -527,7 +563,7 @@ INSERT INTO `materia` (`id_materia`, `nombre`, `nombre_corto`, `semestre`, `hora
 (117, 'ACTIVIDAD CIVICO CULTURAL BANDA DE GUERRA', 'BANDA', 1, 1, 'N', 4, 1, 1),
 (118, 'ACTIVIDAD CIVICO CULTURAL (ESCOLTA)', 'ESCOLTA', 0, 1, 'N', 17, 1, 1),
 (119, 'ENCUENTRO DE ARTE Y CULTURA', 'EAC', 1, 1, 'N', 1, 1, 1),
-(120, 'ACTIVIDAD CÍVICO CULTURAL (GUITARRA)', 'GUITARRA', 1, 1, 'N', 3, 1, 1),
+(120, 'ACTIVIDAD CÍVICO CULTURAL (GUITARRA)', 'GUITARRA', 1, 1, 'N', 17, 1, 1),
 (121, 'EMPLEA FRAMEWORKS PARA EL DESARROLLO DE SOFTWARE', 'EMPLEA FRAMEWORKS', 3, 9, 'N', 3, 1, 1),
 (122, 'RECURSOS SOCIOEMOCIONALES III', 'SOCIOEMO III', 3, 1, 'N', 1, 1, 1),
 (123, 'HUMANIDADES II', 'HUMANIDADES II', 3, 4, 'N', 1, 1, 1),
@@ -537,7 +573,7 @@ INSERT INTO `materia` (`id_materia`, `nombre`, `nombre_corto`, `semestre`, `hora
 (127, 'DEPORTES Y SOCIOEMOCIONALES I', 'DEP Y SOCIO I', 1, 1, 'N', 1, 1, 1),
 (128, 'DEPORTES Y SOCIOEMOCIONALES III', 'DEP Y SOCIO III', 3, 2, 'N', 1, 1, 1),
 (129, 'ACTIVIDAD CÍVICO CULTURAL (BANDA DE GUERRA)', 'BANDA DE GUERRA', 3, 1, 'N', 4, 1, 1),
-(130, 'ACTIVIDAD CÍVICO CULTURAL (ESCOLTA)', 'ESCOLTA', 3, 1, 'N', 3, 1, 1),
+(130, 'ACTIVIDAD CÍVICO CULTURAL (ESCOLTA)', 'ESCOLTA', 3, 1, 'N', 17, 1, 1),
 (131, 'PORRA', 'PORRA', 0, 1, 'N', 1, 1, 1),
 (136, 'materia de prueba cct 2 ', 'mat pCCT2', 1, 1, 'N', 1, 1, 2);
 
@@ -652,7 +688,8 @@ CREATE TABLE `usuario` (
 INSERT INTO `usuario` (`id_usuario`, `nombre`, `correo_electronico`, `password`, `tipo_usuario`, `status`, `telefono`, `id_ct`) VALUES
 (1, 'Super Administrador', 'superAdm@gmail.com', '$2b$12$aXt.urKj5OgRLGnATTloj.siVIgmasf7uCVdWndWHyK/raktqif3a', 1, 1, '449 429 6282', 1),
 (2, 'Martin', 'martin@gmail.com', '$2b$12$1SGgp4REQ8oF178B55IgfeEzFvx4gD2L1wAH6lQTW5dANqBN8X8SK', 2, 1, '449 223 9955', 1),
-(3, 'Bernado', 'bernardo@gmail.com', '$2b$12$cZp3DQIUwFj8rKttO3lxC.CdFzpCvQeSE7TsMgup6iYb2osX/GMZ.', 2, 1, '449 107 7654', 2);
+(3, 'Bernado', 'bernardo@gmail.com', '$2b$12$cZp3DQIUwFj8rKttO3lxC.CdFzpCvQeSE7TsMgup6iYb2osX/GMZ.', 2, 1, '449 107 7654', 2),
+(8, 'Fabiola', 'faby@gmail.com', '$2b$12$.9mjw/lNEWQrxEvvJYUA5uI23ENYTNPqZsN8OTBHvo0nEg08ob8CK', 2, 1, '99999999', 1);
 
 -- --------------------------------------------------------
 
@@ -963,7 +1000,7 @@ ALTER TABLE `academia`
 -- AUTO_INCREMENT de la tabla `asignacion_docente`
 --
 ALTER TABLE `asignacion_docente`
-  MODIFY `id_asignacion` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id_asignacion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT de la tabla `bloque_horario`
@@ -993,13 +1030,13 @@ ALTER TABLE `especialidad`
 -- AUTO_INCREMENT de la tabla `grupo`
 --
 ALTER TABLE `grupo`
-  MODIFY `id_grupo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `id_grupo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
 
 --
 -- AUTO_INCREMENT de la tabla `horario_detalle`
 --
 ALTER TABLE `horario_detalle`
-  MODIFY `id_horario` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id_horario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT de la tabla `materia`
@@ -1035,7 +1072,7 @@ ALTER TABLE `turno`
 -- AUTO_INCREMENT de la tabla `usuario`
 --
 ALTER TABLE `usuario`
-  MODIFY `id_usuario` int(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id_usuario` int(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- Restricciones para tablas volcadas
