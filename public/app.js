@@ -4,8 +4,6 @@ const semesterSelect = $('#semester-select');
 const teacherSelect = $('#teacher-select');
 const subjectSelect = $('#subject-select');
 const groupSelect = $('#group-select');
-const turnFilter = $('#turn-filter');
-const specialtyFilter = $('#specialty-filter');
 const scheduleGrid = $('#schedule-grid');
 const catalogDialog = $('#catalog-dialog');
 
@@ -326,11 +324,11 @@ function optionMarkup(items, valueKey, labelBuilder, placeholder) {
   return [`<option value="">${escapeHtml(placeholder)}</option>`, ...options].join('');
 }
 
-function fillSelect(select, items, valueKey, labelBuilder, placeholder, preferredValue = select.value) {
+function fillSelect(select, items, valueKey, labelBuilder, placeholder, preferredValue = select.value, selectSingleOption = true) {
   select.innerHTML = optionMarkup(items, valueKey, labelBuilder, placeholder);
   if (items.some((item) => String(item[valueKey]) === String(preferredValue))) {
     select.value = String(preferredValue);
-  } else if (items.length === 1) {
+  } else if (selectSingleOption && items.length === 1) {
     select.value = String(items[0][valueKey]);
   }
 }
@@ -369,8 +367,6 @@ function renderCargaControls() {
   const previousTeacher = teacherSelect.value;
   fillSelect(teacherSelect, state.catalogs.docentes ?? [], 'id_docente', (item) => item.nombre_completo ?? item.nombre, 'Selecciona docente', previousTeacher);
   fillSelect($('#schedule-teacher-select'), state.catalogs.docentes ?? [], 'id_docente', (item) => item.nombre_completo ?? item.nombre, 'Selecciona docente');
-  fillSelect(turnFilter, state.catalogs.turnos ?? [], 'id_turno', (item) => item.nombre_turno ?? item.Descripcion, 'Todos los turnos');
-  fillSelect(specialtyFilter, state.catalogs.especialidades ?? [], 'id_especialidad', (item) => item.nombre_especialidad, 'Todas las especialidades');
 
   const currentSubject = subjectSelect.value;
   const currentGroup = groupSelect.value;
@@ -382,13 +378,11 @@ function renderCargaControls() {
   const groups = chosenSubject
     ? state.catalogs.grupos.filter((item) => Number(item.semestre) === Number(chosenSubject.semestre))
     : state.catalogs.grupos ?? [];
-  const filteredGroups = groups.filter((item) =>
-    (!turnFilter.value || String(item.id_turno) === turnFilter.value) &&
-    (!specialtyFilter.value || String(item.id_especialidad) === specialtyFilter.value)
-  );
-
-  fillSelect(subjectSelect, subjects, 'id_materia', (item) => `${item.nombre_materia} · ${item.semestre}° · ${item.horas} h`, 'Selecciona materia', currentSubject);
-  fillSelect(groupSelect, filteredGroups, 'id_grupo', (item) => `${item.nombre_grupo} · ${item.turno_descripcion}`, 'Selecciona grupo', currentGroup);
+  fillSelect(subjectSelect, subjects, 'id_materia', (item) => `${item.nombre_materia} · ${item.semestre}° · ${item.horas} h`, 'Selecciona materia', currentSubject, false);
+  fillSelect(groupSelect, groups, 'id_grupo', (item) => `${item.nombre_grupo} · ${item.turno_descripcion}`, 'Selecciona grupo', currentGroup, false);
+  const selectedGroup = state.catalogs.grupos?.find((item) => String(item.id_grupo) === groupSelect.value);
+  $('#assignment-specialty').value = selectedGroup?.nombre_especialidad ?? '';
+  $('#assignment-turn').value = selectedGroup?.turno_descripcion ?? '';
 
   const groupsForCounts = state.catalogs.grupos ?? [];
   $('#morning-count').textContent = String(groupsForCounts.filter((item) => Number(item.id_turno) === 1).length);
@@ -421,6 +415,12 @@ function renderTeacherHours() {
   const percentage = total > 0 ? Math.min(100, Math.max(0, (used / total) * 100)) : 0;
   $('#teacher-hours-meter').style.width = `${percentage}%`;
   $('#teacher-hours-meter').classList.toggle('is-over', used > total);
+}
+
+function clearCargaSelection() {
+  subjectSelect.value = '';
+  groupSelect.value = '';
+  renderCargaControls();
 }
 
 async function loadTeacherAssignments() {
@@ -537,6 +537,9 @@ async function refreshScheduleWorkspace() {
   if (!filterId) {
     $('#schedule-assignment-select').innerHTML = '<option value="">No hay asignaciones disponibles</option>';
     $('#schedule-context').textContent = '';
+    $('#schedule-hours-status').textContent = '';
+    state.scheduleAssignments = [];
+    state.scheduleGrid = null;
     renderScheduleGrid(null);
     return;
   }
@@ -550,7 +553,7 @@ async function refreshScheduleWorkspace() {
       $('#schedule-assignment-select'),
       assignments,
       'id_asignacion',
-      (item) => `${item.docente_nombre} · ${item.nombre_materia} · ${item.grupo}`,
+      (item) => `${item.docente_nombre} · ${item.nombre_materia} · ${item.grupo} · (${Number(item.horas_materia ?? item.horas ?? 0)} h)`,
       'Selecciona asignación',
       selectedAssignment
     );
@@ -558,11 +561,22 @@ async function refreshScheduleWorkspace() {
     const grid = await requestJson(`/api/horario/grid?semesterId=${state.semesterId}&${queryKey}=${filterId}`);
     state.scheduleGrid = grid;
     const selected = assignments.find((item) => String(item.id_asignacion) === $('#schedule-assignment-select').value);
+    const assignedHours = selected
+      ? grid.celdas.filter((item) => Number(item.id_asignacion) === Number(selected.id_asignacion)).length
+      : 0;
+    const subjectHours = Number(selected?.horas_materia ?? selected?.horas ?? 0);
+    $('#schedule-hours-status').textContent = selected
+      ? `Horas asignadas: ${assignedHours} / ${subjectHours} hrs`
+      : '';
     $('#schedule-context').textContent = selected
       ? `${selected.docente_nombre} · ${selected.nombre_materia} · ${selected.grupo}`
       : `${assignments.length} ${assignments.length === 1 ? 'asignación disponible' : 'asignaciones disponibles'}`;
     renderScheduleGrid(grid);
+    if (selected && assignedHours >= subjectHours) {
+      showMessage(`La materia ya cubrió sus ${subjectHours} horas semanales permitidas.`, 'info');
+    }
   } catch (error) {
+    $('#schedule-hours-status').textContent = '';
     showMessage(error.message, 'error');
     renderScheduleGrid(null);
   }
@@ -579,6 +593,10 @@ function renderScheduleGrid(grid) {
   }
   const days = grid.dias ?? ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
   const assignmentId = Number($('#schedule-assignment-select').value ?? 0);
+  const selectedAssignment = state.scheduleAssignments.find((item) => Number(item.id_asignacion) === assignmentId);
+  const assignedHours = (grid.celdas ?? []).filter((item) => Number(item.id_asignacion) === assignmentId).length;
+  const subjectHours = Number(selectedAssignment?.horas_materia ?? selectedAssignment?.horas ?? 0);
+  const hourLimitReached = Boolean(selectedAssignment && assignedHours >= subjectHours);
   const cells = new Map((grid.celdas ?? []).map((item) => [`${item.id_bloque}:${item.dia_semana}`, item]));
   const blocks = sortBlocksByTime(grid.bloques);
   let body = '';
@@ -602,7 +620,7 @@ function renderScheduleGrid(grid) {
         const sameAssignment = Number(item.id_asignacion) === assignmentId;
         body += `<td><button class="schedule-cell is-occupied${sameAssignment ? ' is-selected-assignment' : ''}" type="button" data-day="${escapeHtml(day)}" data-block="${Number(block.id_bloque)}" data-assignment="${Number(item.id_asignacion)}" aria-label="${escapeHtml(day)}, ${blockLabel}: ${escapeHtml(item.docente_nombre)}, ${escapeHtml(item.nombre_materia)}"><strong>${escapeHtml(item.docente_nombre)}</strong><span>${escapeHtml(item.nombre_materia)}</span><small>${escapeHtml(item.nombre_grupo)}</small></button></td>`;
       } else {
-        body += `<td><button class="schedule-cell is-open" type="button" data-day="${escapeHtml(day)}" data-block="${Number(block.id_bloque)}" aria-label="Asignar ${escapeHtml(day)} ${blockLabel}" ${!assignmentId || isGlobalReadOnly() || !selectedSemesterIsEditable() ? 'disabled' : ''}><span class="cell-add" aria-hidden="true">+</span><span class="visually-hidden">Asignar</span></button></td>`;
+        body += `<td><button class="schedule-cell is-open" type="button" data-day="${escapeHtml(day)}" data-block="${Number(block.id_bloque)}" aria-label="Asignar ${escapeHtml(day)} ${blockLabel}" ${!assignmentId || !selectedAssignment || hourLimitReached || isGlobalReadOnly() || !selectedSemesterIsEditable() ? 'disabled' : ''}><span class="cell-add" aria-hidden="true">+</span><span class="visually-hidden">Asignar</span></button></td>`;
       }
     }
     body += '</tr>';
@@ -627,6 +645,16 @@ async function toggleScheduleCell(button) {
   if (!assignmentId) {
     showMessage('Selecciona primero una asignación docente.', 'warning');
     return;
+  }
+  if (button.classList.contains('is-open')) {
+    const selectedAssignment = state.scheduleAssignments.find((item) => Number(item.id_asignacion) === assignmentId);
+    const assignedHours = (state.scheduleGrid?.celdas ?? [])
+      .filter((item) => Number(item.id_asignacion) === assignmentId).length;
+    const subjectHours = Number(selectedAssignment?.horas_materia ?? selectedAssignment?.horas ?? 0);
+    if (selectedAssignment && assignedHours >= subjectHours) {
+      showMessage(`La materia ya cubrió sus ${subjectHours} horas semanales permitidas.`, 'info');
+      return;
+    }
   }
   button.disabled = true;
   try {
@@ -908,9 +936,8 @@ function bindEvents() {
     }
     renderCargaControls();
   });
-  turnFilter.addEventListener('change', renderCargaControls);
-  specialtyFilter.addEventListener('change', renderCargaControls);
   $('#assignment-form').addEventListener('submit', submitCarga);
+  $('#clear-assignment').addEventListener('click', clearCargaSelection);
 
   $('#schedule-group-select').addEventListener('change', refreshScheduleWorkspace);
   $('#schedule-teacher-select').addEventListener('change', refreshScheduleWorkspace);

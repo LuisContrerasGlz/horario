@@ -115,7 +115,7 @@ const validHorarioInput = {
   dia_semana: 'Lunes',
   id_bloque: 1,
   docente: { horas_nombramiento: 20, horas_descarga: 4, id_cct: 1 },
-  materia: { tipo_semestre: 'P', semestre: 2, id_cct: 1 },
+  materia: { tipo_semestre: 'P', semestre: 2, horas: 7, id_cct: 1 },
   grupo: { tipo_semestre: 'P', semestre: 2, id_cct: 1, id_turno: 1 },
   semestre: { tipo_semestre: 'P', id_status: 1, id_cct: 1 },
   asignacion: { id_asignacion: 50, id_semestre: 100 },
@@ -129,6 +129,47 @@ test('allows a valid assignment when no conflicts exist', () => {
       { id_docente: 2, dia_semana: 'Lunes', id_bloque: 1 },
       { id_grupo: 11, dia_semana: 'Lunes', id_bloque: 1 }
     ]
+  });
+
+  assert.equal(result.valid, true);
+  assert.deepEqual(result.errors, []);
+});
+
+test('rejects schedule blocks after the assignment reaches the subject hour limit', () => {
+  const result = validateHorarioAssignment({
+    ...validHorarioInput,
+    dia_semana: 'Viernes',
+    id_bloque: 8,
+    existingAssignments: Array.from({ length: 7 }, (_, index) => ({
+      id_asignacion: 50,
+      id_docente: 2,
+      id_grupo: 11,
+      id_horario: index + 1,
+      dia_semana: 'Lunes',
+      id_bloque: index + 1,
+    })),
+  });
+
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join(' '), /No se puede asignar el horario: la materia ya tiene cubiertas sus 7 horas semanales permitidas\./);
+});
+
+test('allows editing an existing block when the assignment is at the subject hour limit', () => {
+  const result = validateHorarioAssignment({
+    ...validHorarioInput,
+    id_horario: 7,
+    excludeId: 7,
+    existingAssignments: [
+      ...Array.from({ length: 6 }, (_, index) => ({
+        id_asignacion: 50,
+        id_docente: 2,
+        id_grupo: 11,
+        id_horario: index + 1,
+        dia_semana: 'Lunes',
+        id_bloque: index + 1,
+      })),
+      { id_asignacion: 50, id_docente: 1, id_grupo: 10, id_horario: 7, dia_semana: 'Martes', id_bloque: 7 },
+    ],
   });
 
   assert.equal(result.valid, true);

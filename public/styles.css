@@ -148,6 +148,9 @@ h2 { margin-bottom: 14px; font-family: Georgia, "Times New Roman", serif; font-s
 .assignment-form h2 { margin-bottom: 2px; }
 .field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .field-pair-controls { margin-top: -7px; }
+.assignment-form input[readonly] { background: var(--surface-alt); color: var(--ink-soft); }
+.assignment-actions { display: flex; gap: 8px; }
+.assignment-actions .button { flex: 1; }
 .group-counts { display: flex; justify-content: space-between; padding: 7px 0 3px; color: var(--muted); font-size: .78rem; }
 .group-counts strong { padding-left: 4px; color: var(--ink); }
 .button { min-height: 39px; padding: 8px 13px; border: 1px solid transparent; border-radius: 4px; font-size: .82rem; font-weight: 700; }
@@ -176,6 +179,7 @@ tfoot th, tfoot td { border-top: 2px solid var(--ink-soft); border-bottom: 0; co
 .schedule-controls { display: flex; align-items: end; gap: 13px; margin-bottom: 18px; }
 .schedule-controls label { min-width: 210px; }
 .schedule-context { margin: 0 0 10px auto; color: var(--muted); font-size: .82rem; }
+.schedule-hours-status { color: var(--teal-deep); font-size: .76rem; font-weight: 600; }
 .schedule-grid-container { width: 100%; min-width: 0; overflow-x: auto; }
 .schedule-table { min-width: 850px; table-layout: fixed; background: var(--surface); }
 .schedule-table th, .schedule-table td { padding: 5px; border-right: 1px solid var(--line); }

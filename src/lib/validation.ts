@@ -13,6 +13,7 @@ export type DocenteLike = {
 export type MateriaLike = {
   tipo_semestre?: string | null;
   semestre?: number | null;
+  horas?: number | null;
   id_cct?: number | null;
 };
 
@@ -245,6 +246,16 @@ export function validateHorarioAssignment(input: HorarioValidationInput): Valida
   const assignedHours = existingAssignments
     .filter((record) => record.id_docente === input.id_docente)
     .reduce((sum, record) => sum + Number(record.horas ?? 1), 0);
+
+  const subjectHours = Number(input.materia?.horas ?? Number.NaN);
+  const assignedSubjectBlocks = existingAssignments
+    .filter((record) => Number(record.id_asignacion) === Number(input.id_asignacion))
+    .length;
+  if (Number.isFinite(subjectHours) && subjectHours >= 0 && assignedSubjectBlocks >= subjectHours) {
+    errors.push(
+      `No se puede asignar el horario: la materia ya tiene cubiertas sus ${subjectHours} horas semanales permitidas.`
+    );
+  }
 
   if (availableHours > 0 && assignedHours + proposedHours > availableHours) {
     errors.push(

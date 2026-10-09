@@ -7,7 +7,7 @@
 >
 > Toma como referencia la estructura actual de la base de datos `sis_doc`.
 
----   
+---
 
 ## 1. RESUMEN Y ARQUITECTURA DEL PROYECTO
 
@@ -459,27 +459,20 @@ Las horas disponibles se calculan como:
 
 Mostrar controles para seleccionar:
 
-* Materia.
-* Grupo.
-* Turno.
-* Especialidad.
+* **Materia.**
+* **Grupo.**
+
+**Inferencia Automática de Datos del Grupo:**
+* Dado que el `Turno` (`id_turno`) y la `Especialidad` (`id_especialidad`) están vinculados directamente al `grupo` en la base de datos (`vista_grupos`), **no se requiere captura manual ni selección por parte del usuario** para dichos campos[cite: 18, 19].
+* Al seleccionar un `Grupo`, el sistema obtendrá automáticamente su `Turno` y `Especialidad` asociados[cite: 18, 19].
+* Los campos de `Turno` y `Especialidad` se mostrarán únicamente como **etiquetas informativas de lectura** (*read-only* / *disabled*) dentro del formulario, actualizándose dinámicamente al cambiar el `Grupo`[cite: 19].
 
 También mostrar:
 
-* contador de grupos Matutinos;
-* contador de grupos Vespertinos;
-* botón **Agregar**.
-
-Al presionar **Agregar**, se creará un registro en:
-
-`asignacion_docente`
-
-con:
-
-* `id_semestre`
-* `id_docente`
-* `id_materia`
-* `id_grupo`
+* Contador de grupos Matutinos.
+* Contador de grupos Vespertinos.
+* Botón **Agregar** (crea el registro en `asignacion_docente` con `id_semestre`, `id_docente`, `id_materia` e `id_grupo`)[cite: 18, 19].
+* **Botón Limpiar / Resetear:** Permite restablecer los campos seleccionados en el panel (`Materia`, `Grupo` y sus etiquetas informativas) para comenzar una nueva selección limpiamente[cite: 18, 19].
 
 ---
 
@@ -644,21 +637,16 @@ Mostrar:
 
 ---
 
-#### 5.5.2 Selección del Grupo
+#### 5.5.2 Selección del Grupo y Asignación Docente-Materia **[NUEVO/ACTUALIZADO]**
 
-Mostrar un combo para seleccionar el grupo.
+1. **Selección de Grupo:** Mostrar un combo para seleccionar el grupo, filtrado por `id_semestre` activo, `tipo_semestre` y `id_cct`. Al elegirlo, se determinará el turno (`grupo.id_turno`) para renderizar los bloques de horario correspondientes.
+2. **Selección de Asignación (Combo Docente - Materia) [NUEVO/ACTUALIZADO]:**
+   * Mostrar un combo con la lista de asignaciones activas en `asignacion_docente` para ese grupo y semestre.
+   * **Formato del Texto en el Combo [NUEVO/ACTUALIZADO]:** El texto de cada opción debe construirse explícitamente incluyendo las horas que le corresponden a la materia (`materia.horas`), con la siguiente estructura:
+     $$\text{DOCENTE} \cdot \text{MATERIA} \cdot \text{GRUPO} \cdot (\text{horas } h)$$
 
-Los grupos deberán filtrarse por:
-
-* `id_semestre` seleccionado;
-* `tipo_semestre`;
-* `id_cct` (restringido al CCT del usuario para Administrador/Revisor).
-
-Una vez seleccionado un grupo, obtener:
-
-`grupo.id_turno`
-
-para determinar los bloques horarios disponibles.
+     *(Ejemplo: `CONTRERAS ROMO MARTIN · CODIFICA SOFTWARE DE SISTEMAS INFORMATICOS · 2° G · (7 h)`)*
+   * **Indicador Visual de Horas [NUEVO/ACTUALIZADO]:** Al seleccionar una asignación, se mostrará dinámicamente un contador con las **horas asignadas en la retícula / horas totales de la materia** (Ejemplo: `Asignadas: 3 / 7 hrs`).
 
 ---
 
@@ -676,7 +664,8 @@ correspondientes a:
 La información visible deberá incluir:
 
 * docente;
-* materia.
+* materia;
+* horas asignadas de la materia.
 
 ---
 
@@ -758,7 +747,7 @@ Al hacer clic en una celda disponible:
 3. Obtener `id_semestre`.
 4. Obtener `id_docente`.
 5. Obtener `id_grupo`.
-6. Validar todas las reglas de disponibilidad.
+6. Validar todas las reglas de disponibilidad y límite de horas.
 7. Si no existen conflictos, insertar en `horario_detalle`:
 
    * `id_asignacion`
@@ -816,7 +805,18 @@ Si el semestre está inactivo, no permitir:
 
 ---
 
-#### 5.7.2 Sin Empalme de Docente
+#### 5.7.2 Tope de Horas de la Materia por Asignación **[NUEVO/ACTUALIZADO]**
+
+* **Validación de Límite de Horas de Materia [NUEVO/ACTUALIZADO]:** Antes de registrar un nuevo bloque en `horario_detalle` para una `id_asignacion` específica, se debe contar el número total de bloques/módulos que esa `id_asignacion` ya tiene registrados en la tabla `horario_detalle` para el `id_semestre` activo.
+* **Regla de Negocio [NUEVO/ACTUALIZADO]:** La cantidad de bloques asignados en el horario semanal **no puede superar** el valor de `materia.horas` correspondiente a la materia de dicha asignación[cite: 1, 20].
+  $$\text{Bloques Asignados} + 1 \le \text{materia.horas}$$
+[cite: 1]
+* **Mensaje de Error [NUEVO/ACTUALIZADO]:** Si la materia requiere 7 horas semanales (`materia.horas = 7`) y el usuario intenta asignar un 8° bloque para esa materia en el horario, el backend rechazará la operación y responderá con el mensaje[cite: 1, 20]:
+  **"No se puede asignar el horario: la materia ya tiene cubiertas sus X horas semanales permitidas."**
+
+---
+
+#### 5.7.3 Sin Empalme de Docente
 
 Un docente no puede tener más de una clase en:
 
@@ -834,7 +834,7 @@ Si ya existe otra asignación, mostrar:
 
 ---
 
-#### 5.7.3 Sin Empalme de Grupo
+#### 5.7.4 Sin Empalme de Grupo
 
 Un grupo no puede tener más de una clase en:
 
@@ -852,7 +852,7 @@ Si ya existe otra asignación, mostrar:
 
 ---
 
-#### 5.7.4 Compatibilidad del Turno
+#### 5.7.5 Compatibilidad del Turno
 
 El bloque horario deberá corresponder al turno del grupo.
 
@@ -868,7 +868,7 @@ Un grupo Vespertino no podrá utilizar bloques M1-M8.
 
 ---
 
-#### 5.7.5 Coherencia del Semestre
+#### 5.7.6 Coherencia del Semestre
 
 La asignación, materia y grupo deberán respetar el semestre activo.
 
@@ -884,7 +884,7 @@ y además:
 
 ---
 
-#### 5.7.6 Número de Semestre
+#### 5.7.7 Número de Semestre
 
 Validar:
 
@@ -894,7 +894,7 @@ No será suficiente que ambos pertenezcan al mismo tipo P/N.
 
 ---
 
-#### 5.7.7 Centro de Trabajo
+#### 5.7.8 Centro de Trabajo
 
 La asignación utilizada deberá pertenecer al mismo CCT del semestre
 y del grupo que se está programando. Para Administrador y Revisor, deberá coincidir estrictamente con su `usuario.id_ct`.
@@ -911,12 +911,13 @@ Flujo recomendado:
 1. Iniciar transacción.
 2. Recuperar información de `id_asignacion`.
 3. Validar semestre activo.
-4. Validar disponibilidad del docente.
-5. Validar disponibilidad del grupo.
-6. Validar turno.
-7. Validar coherencia de semestre.
-8. Insertar o eliminar `horario_detalle`.
-9. Confirmar transacción.
+4. Validar disponibilidad de horas de la materia (`bloques_actuales < materia.horas`)[cite: 1, 20].
+5. Validar disponibilidad del docente.
+6. Validar disponibilidad del grupo.
+7. Validar turno.
+8. Validar coherencia de semestre.
+9. Insertar o eliminar `horario_detalle`.
+10. Confirmar transacción.
 
 En caso de error:
 
@@ -950,13 +951,14 @@ Responsable de:
 Responsable de:
 
 * autenticación de usuarios y caducidad de sesión (5 min de inactividad);
-* middleware de control de acceso, matriz de permisos por rol y **restricción estricta por `id_ct`** (salvo Superadministrador);
+* middleware de control de acceso, matriz de permisos por rol y restricción estricta por `id_ct` (salvo Superadministrador);
 * semestre activo;
 * permisos de modificación;
 * par / impar;
 * compatibilidad materia-grupo;
 * compatibilidad de CCT;
-* control de horas;
+* control de horas del docente;
+* **control de tope de horas por materia (`materia.horas`) [NUEVO/ACTUALIZADO]**[cite: 1, 20];
 * empalme de docente;
 * empalme de grupo;
 * compatibilidad de turno;
@@ -969,6 +971,9 @@ Responsable de:
 * formulario de inicio de sesión (Login);
 * presentación según rol del usuario logueado;
 * fijar y deshabilitar la selección de Centro de Trabajo (CCT) para Administrador y Revisor;
+* autocompletar dinámicamente Turno y Especialidad informativos al seleccionar un Grupo en Carga Docente[cite: 18, 19];
+* **incluir el número de horas de la materia en las opciones del combo Asignación en la vista de Horarios [NUEVO/ACTUALIZADO]**[cite: 1, 20];
+* **mostrar el contador dinámico de horas asignadas vs. horas semanales permitidas [NUEVO/ACTUALIZADO]**[cite: 20];
 * ocultar / deshabilitar botones de edición para perfiles restringidos o rol Revisor (solo lectura);
 * selects dependientes;
 * filtros;
@@ -1047,3 +1052,4 @@ El módulo se considerará funcionalmente correcto cuando:
 5. El Administrador pueda editar/agregar en la Carga Docente, Horarios y catálogos de docente, materia, grupo, academia y especialidad de su CCT, con acceso de solo lectura a los catálogos globales (semestre, CCT, bloques, turno) y bloqueo total a usuarios, tipos de usuario y estatus.
 6. El **Revisor** pueda consultar la Carga Docente, Horarios y catálogos permitidos únicamente de su CCT, pero con un bloqueo **estricto a nivel de backend y frontend de cualquier acción de creación, edición o eliminación (modo 100% solo lectura)**.
 7. El backend rechace con HTTP 401 o 403 cualquier petición `POST`, `PUT` o `DELETE` realizada por usuarios no autenticados, con rol **Revisor**, o que intente acceder/modificar registros pertenecientes a un CCT distinto al asignado en la sesión del usuario.
+8. **En la vista de Horarios, el combo de asignación muestre explícitamente las horas correspondientes a la materia y se impida visualmente y en backend asignar más celdas/bloques en la retícula que el límite semanal permitido por la materia (`materia.horas`) [NUEVO/ACTUALIZADO]**[cite: 1, 20].  

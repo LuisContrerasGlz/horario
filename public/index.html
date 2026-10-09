@@ -74,21 +74,24 @@
 
               <div class="field-pair">
                 <label for="group-select">Grupo</label>
-                <label for="specialty-filter">Especialidad</label>
+                <label for="assignment-specialty">Especialidad</label>
               </div>
               <div class="field-pair field-pair-controls">
                 <select id="group-select" required></select>
-                <select id="specialty-filter" aria-label="Filtrar por especialidad"></select>
+                <input id="assignment-specialty" type="text" readonly placeholder="Se completa al elegir grupo" aria-label="Especialidad del grupo seleccionado">
               </div>
 
-              <label for="turn-filter">Turno</label>
-              <select id="turn-filter" aria-label="Filtrar grupos por turno"></select>
+              <label for="assignment-turn">Turno</label>
+              <input id="assignment-turn" type="text" readonly placeholder="Se completa al elegir grupo">
 
               <div class="group-counts" aria-live="polite">
                 <span>Matutinos <strong id="morning-count">0</strong></span>
                 <span>Vespertinos <strong id="afternoon-count">0</strong></span>
               </div>
-              <button id="add-assignment" class="button button-primary" type="submit">Agregar asignación</button>
+              <div class="assignment-actions">
+                <button id="add-assignment" class="button button-primary" type="submit">Agregar asignación</button>
+                <button id="clear-assignment" class="button button-secondary" type="button">Limpiar</button>
+              </div>
             </form>
           </section>
 
@@ -137,6 +140,7 @@
           </label>
           <label id="schedule-assignment-field" for="schedule-assignment-select">Asignación
             <select id="schedule-assignment-select"></select>
+            <small id="schedule-hours-status" class="schedule-hours-status" role="status" aria-live="polite"></small>
           </label>
           <p id="schedule-context" class="schedule-context"></p>
         </div>

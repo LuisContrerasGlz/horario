@@ -338,7 +338,7 @@ function normalizeTipoSemestre(value: unknown): string {
 // directamente id_docente/id_grupo/id_materia/id_semestre.
 async function getHorarioBySemester(conn: PoolConnection, semesterId: number) {
   const [rows] = await conn.query<any>(
-    `SELECT hd.id_horario, hd.dia_semana, hd.id_bloque, ad.id_docente, ad.id_grupo, ad.id_materia, ad.id_semestre
+    `SELECT hd.id_horario, hd.id_asignacion, hd.dia_semana, hd.id_bloque, ad.id_docente, ad.id_grupo, ad.id_materia, ad.id_semestre
        FROM horario_detalle hd
        JOIN asignacion_docente ad ON ad.id_asignacion = hd.id_asignacion
       WHERE ad.id_semestre = ?
@@ -1616,6 +1616,7 @@ export function buildApiRouter() {
       `SELECT ad.id_asignacion, ad.id_semestre,
               d.id_docente, d.horas_nombramiento, d.horas_descarga, d.id_cct AS docente_id_cct,
               m.id_materia, m.semestre AS materia_semestre, m.tipo_semestre AS materia_tipo_semestre,
+              m.horas AS materia_horas,
               m.id_cct AS materia_id_cct,
               g.id_grupo, g.semestre AS grupo_semestre, g.tipo_semestre AS grupo_tipo_semestre,
               g.id_cct AS grupo_id_cct, g.id_turno AS grupo_id_turno
@@ -1644,6 +1645,7 @@ export function buildApiRouter() {
         id_materia: Number(row.id_materia),
         semestre: Number(row.materia_semestre),
         tipo_semestre: row.materia_tipo_semestre,
+        horas: Number(row.materia_horas),
         id_cct: Number(row.materia_id_cct),
       },
       grupo: {
@@ -1723,6 +1725,10 @@ export function buildApiRouter() {
   }
 
   function throwHorarioValidation(errors: string[]) {
+    const subjectHoursError = errors.find((item) => item.startsWith('No se puede asignar el horario:'));
+    if (subjectHoursError) {
+      throw Object.assign(new Error(subjectHoursError), { httpStatus: 409 });
+    }
     throw Object.assign(new Error('Horario no disponible.'), { httpStatus: 409, validationErrors: errors });
   }
 
