@@ -122,7 +122,16 @@
             <p class="eyebrow">Planeación semanal</p>
             <h1>Horarios</h1>
           </div>
-          <span id="schedule-edit-state" class="status-pill">Consulta</span>
+          <div class="catalog-actions">
+            <span id="schedule-edit-state" class="status-pill">Consulta</span>
+            <button id="print-schedule" class="button button-secondary" type="button">Imprimir Horario</button>
+          </div>
+        </div>
+
+        <div id="schedule-print-header" class="print-header" hidden>
+          <h2 id="print-cct"></h2>
+          <p><strong>Semestre activo:</strong> <span id="print-semester"></span></p>
+          <p><strong id="print-subject-label">Grupo:</strong> <span id="print-subject"></span></p>
         </div>
 
         <div class="schedule-modes" role="tablist" aria-label="Vista de horario">

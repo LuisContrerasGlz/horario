@@ -501,6 +501,9 @@ function setScheduleMode(mode) {
     button.setAttribute('aria-selected', String(active));
   });
   const subjectsMode = mode === 'subjects';
+  $('#print-schedule').hidden = subjectsMode;
+  $('#schedule-print-header').hidden = subjectsMode;
+  $('#schedule-print-header').classList.toggle('is-per-sheet', mode === 'teacher');
   $('#schedule-controls').hidden = subjectsMode;
   $('#schedule-grid-container').hidden = subjectsMode;
   $('#subjects-by-semester').hidden = !subjectsMode;
@@ -522,6 +525,16 @@ function renderSemesterSubjects() {
     : '<tr><td colspan="4" class="empty-row">No hay materias para este periodo.</td></tr>';
 }
 
+function renderPrintHeader() {
+  const semester = state.semester;
+  const isGroup = state.scheduleMode === 'group';
+  const selector = isGroup ? $('#schedule-group-select') : $('#schedule-teacher-select');
+  $('#print-cct').textContent = semester?.CCT ? `${semester.nombre_centro_trabajo ?? ''} · CCT ${semester.CCT}` : '';
+  $('#print-semester').textContent = semester?.descripcion ?? '';
+  $('#print-subject-label').textContent = isGroup ? 'Grupo:' : 'Docente:';
+  $('#print-subject').textContent = selector.value ? selector.selectedOptions[0].textContent : '';
+}
+
 function renderScheduleFilters() {
   fillSelect($('#schedule-group-select'), state.catalogs.grupos ?? [], 'id_grupo', (item) => `${item.nombre_grupo} · ${item.turno_descripcion}`, 'Selecciona grupo');
   fillSelect($('#schedule-teacher-select'), state.catalogs.docentes ?? [], 'id_docente', (item) => item.nombre_completo, 'Selecciona docente');
@@ -532,6 +545,7 @@ async function refreshScheduleWorkspace() {
     return;
   }
   renderScheduleFilters();
+  renderPrintHeader();
   const selector = state.scheduleMode === 'group' ? $('#schedule-group-select') : $('#schedule-teacher-select');
   const filterId = Number(selector.value);
   if (!filterId) {
@@ -599,12 +613,13 @@ function renderScheduleGrid(grid) {
   const hourLimitReached = Boolean(selectedAssignment && assignedHours >= subjectHours);
   const cells = new Map((grid.celdas ?? []).map((item) => [`${item.id_bloque}:${item.dia_semana}`, item]));
   const blocks = sortBlocksByTime(grid.bloques);
-  let body = '';
+  const bodies = new Map();
   let previousTurn = null;
 
   for (const block of blocks) {
     const code = String(block.codigo_bloque ?? '');
     const currentTurn = Number(block.id_turno);
+    let body = bodies.get(currentTurn) ?? '';
     if ((code === 'M4' || code === 'V4') && previousTurn === currentTurn) {
       const pause = code === 'M4' ? '09:30–09:50 · Receso' : '16:30–16:50 · Receso';
       body += `<tr class="break-row"><th scope="row">${pause}</th><td colspan="5">Receso</td></tr>`;
@@ -624,9 +639,20 @@ function renderScheduleGrid(grid) {
       }
     }
     body += '</tr>';
+    bodies.set(currentTurn, body);
   }
 
-  scheduleGrid.innerHTML = `<table class="schedule-table"><thead><tr><th scope="col">Hora</th>${days.map((day) => `<th scope="col">${escapeHtml(day)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
+  const head = `<thead><tr><th scope="col">Hora</th>${days.map((day) => `<th scope="col">${escapeHtml(day)}</th>`).join('')}</tr></thead>`;
+  const turnBlocks = [...bodies.entries()].map(([turn, body]) => {
+    const first = blocks.find((block) => Number(block.id_turno) === turn);
+    const title = String(first?.codigo_bloque ?? '').startsWith('V') ? 'Turno Vespertino' : 'Turno Matutino';
+    const heading = bodies.size > 1 ? `<h3 class="turno-title">${title}</h3>` : '';
+    const sheetHeader = state.scheduleMode === 'teacher'
+      ? `<div class="print-header sheet-header"><h2>${escapeHtml($('#print-cct').textContent)}</h2><p><strong>Semestre activo:</strong> ${escapeHtml($('#print-semester').textContent)}</p><p><strong>Docente:</strong> ${escapeHtml($('#print-subject').textContent)}</p></div>`
+      : '';
+    return `<section class="hoja-impresion turno-block">${sheetHeader}${heading}<table class="schedule-table">${head}<tbody>${body}</tbody></table></section>`;
+  });
+  scheduleGrid.innerHTML = turnBlocks.join('');
   if (!selectedSemesterIsEditable() || isGlobalReadOnly()) {
     scheduleGrid.querySelectorAll('.schedule-cell').forEach((cell) => { cell.disabled = true; });
   }
@@ -939,6 +965,7 @@ function bindEvents() {
   $('#assignment-form').addEventListener('submit', submitCarga);
   $('#clear-assignment').addEventListener('click', clearCargaSelection);
 
+  $('#print-schedule').addEventListener('click', () => window.print());
   $('#schedule-group-select').addEventListener('change', refreshScheduleWorkspace);
   $('#schedule-teacher-select').addEventListener('change', refreshScheduleWorkspace);
   $('#schedule-assignment-select').addEventListener('change', refreshScheduleWorkspace);

@@ -288,4 +288,39 @@ tfoot th, tfoot td { border-top: 2px solid var(--ink-soft); border-bottom: 0; co
   .load-layout { display: block; }
   .load-selection { display: none; }
   .schedule-table { min-width: 0; }
+
+  /* Horarios: solo encabezado y retícula */
+  #view-schedule .view-heading, .schedule-modes, #schedule-controls, #print-schedule, #schedule-edit-state,
+  #subjects-by-semester, .status-pill, .schedule-cell .cell-add, .schedule-cell .visually-hidden { display: none !important; }
+  .schedule-cell.is-open { background: transparent; border: 0; }
+  .schedule-cell.is-occupied { background: transparent; border: 1px solid #999; }
+  .schedule-grid-container, .table-wrap { overflow: visible; }
+  .schedule-table { width: 100%; border-collapse: collapse; color: #000; }
+  .schedule-table th, .schedule-table td { border: 1px solid #666; }
+  .schedule-table thead th { background: #e6e6e6 !important; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .schedule-cell.is-occupied span, .schedule-cell.is-occupied small { white-space: normal; }
+  .print-header { display: block !important; margin-bottom: 12px; color: #000; }
+  .print-header[hidden], #schedule-print-header.is-per-sheet { display: none !important; }
+  .print-header h2 { margin: 0 0 6px; font-size: 1.2rem; }
+  .print-header p { margin: 2px 0; font-size: .95rem; }
+  @page { size: landscape; margin: 8mm; }
+
+  /* Una hoja por horario: tipografía y alturas reducidas */
+  .print-header { margin-bottom: 4px; }
+  .print-header h2 { margin: 0 0 2px; font-size: 13px; }
+  .print-header p { margin: 0; font-size: 11px; }
+  .turno-block { break-inside: avoid; page-break-inside: avoid; }
+  .turno-block + .turno-block { break-before: page; page-break-before: always; }
+  .turno-title { margin: 4px 0; font-size: 11px; color: #000; }
+  .schedule-table { font-size: 10px; }
+  .schedule-table th, .schedule-table td { padding: 1px 3px; }
+  .schedule-table thead th { height: 16px; font-size: 10px; }
+  .schedule-table tbody th.time-cell { width: 90px; font-size: 9px; }
+  .schedule-table td { height: 36px; max-height: 36px; }
+  .schedule-cell { height: 34px; min-height: 0; max-height: 34px; padding: 1px 3px; overflow: hidden; font-size: 10px; }
+  .schedule-cell.is-occupied { gap: 0; }
+  .schedule-cell.is-occupied strong, .schedule-cell.is-occupied span, .schedule-cell.is-occupied small { font-size: 9px; line-height: 1.1; }
+  .break-row th, .break-row td { height: 12px; padding: 0 3px; font-size: 8px; }
 }
+
+.print-header { display: none; }
